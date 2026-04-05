@@ -1,15 +1,16 @@
 # Quick Start Guide
 
-**Train CIFAR-10 on Colab GPU in under 5 minutes.**
+**Run the Bayesian TB Treatment Success analysis on Colab in R.**
 
-This guide walks you through running your first training session using the Drive-first architecture.
+This guide walks you through running the full analysis pipeline using the R-kernel Colab notebook with data and outputs stored on Google Drive.
 
 ---
 
 ## Prerequisites
 
 - Google account (for Colab and Drive)
-- **No local setup required!**
+- WHO TB data files in Drive (or in the repo's `data/data_raw/`)
+- **No local R/JAGS installation required** — everything runs in Colab
 
 ---
 
@@ -21,114 +22,149 @@ This guide walks you through running your first training session using the Drive
 
 **Option B:** Direct link:
 ```
-https://colab.research.google.com/github/armanfeili/ml-colab-agentic/blob/main/notebooks/01_train.ipynb
+https://colab.research.google.com/github/armanfeili/FSL_2_Final_Project/blob/main/notebooks/main.ipynb
 ```
 
-### 2. Enable GPU Runtime
+> The notebook uses an **R kernel** (`ir`). Colab will automatically start the R runtime — you do NOT need to change the runtime type manually.
 
-1. Top menu: **Runtime** → **Change runtime type**
-2. **Hardware accelerator**: GPU
-3. **GPU type**: T4 (free tier) or A100 (if available)
-4. Click **Save**
+### 2. Mount Google Drive
 
-### 3. Verify GPU Access
+Mount your Drive so outputs persist across sessions:
 
-Run the first cell or check GPU info:
-```python
-!nvidia-smi
-```
+1. Click the **folder icon** (📁) in the Colab left sidebar
+2. Click **Mount Drive**
+3. Authorize if prompted
 
-You should see output like:
-```
-+-----------------------------------------------------------------------------+
-| NVIDIA-SMI 525.x.xx    Driver Version: 525.x.xx    CUDA Version: 12.x      |
-|-------------------------------+----------------------+----------------------+
-| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
-| Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
-|===============================+======================+======================|
-|   0  Tesla T4            Off  | 00000000:00:04.0 Off |                    0 |
-| N/A   45C    P0    28W /  70W |      0MiB / 15360MiB |      0%      Default |
-+-------------------------------+----------------------+----------------------+
+Or simply run cell **A0** — it will check whether Drive is already mounted.
+
+### 3. Verify R Runtime
+
+After opening, confirm you're running R (not Python). The first code cell should show R syntax. You can also check:
+
+```r
+R.version.string
+# [1] "R version 4.x.x ..."
 ```
 
 ### 4. Run All Cells
 
 Click **Runtime** → **Run all** or run cells sequentially:
 
-#### **Section A — Setup (Drive + Repo)**
+#### **Section A — Setup (Drive + Repo + R Packages)**
 
 | Cell | Description | Duration |
 |------|-------------|----------|
-| A0 | Mount Google Drive | ~5 sec (requires authorization first time) |
-| A1 | Set up Drive paths | <1 sec |
+| A0 | Mount Google Drive | ~5 sec (requires sidebar click) |
+| A1 | Set up Drive directory paths | <1 sec |
 | A2 | Clone/pull repo from GitHub | ~10 sec |
-| A3 | Install dependencies | ~30 sec |
-| A4 | Import utilities | <1 sec |
-| A4b | Set cache paths & deterministic mode | <1 sec |
-| A5 | (Optional) GPU info | <1 sec |
+| A3 | Install R packages + JAGS system library | ~2-5 min (first time) |
+| A4 | Load all R libraries | ~5 sec |
+| A5 | Set random seed + ggplot2 theme | <1 sec |
 
 **What happens:**
 - Drive mounted at `/content/drive/MyDrive/`
-- Repo cloned to `/content/ml-colab-agentic/`
-- Packages installed: `torch`, `torchvision`, `pyyaml`, etc.
-- Drive folder structure created: `data/`, `runs/`, `latest/`
+- Repo cloned to `/content/FSL_2_Final_Project/`
+- R packages installed: `rjags`, `coda`, `MCMCvis`, `tidyverse`, `lme4`, `VGAM`, etc.
+- JAGS installed as system dependency via `apt-get`
+- Drive folder structure created: `data/`, `runs/`, `output/`
 
-#### **Section B — Run Config**
-
-| Cell | Description | Duration |
-|------|-------------|----------|
-| B0 | Create timestamped run folder | <1 sec |
-| B1 | Set up metrics logger | <1 sec |
-
-**What happens:**
-- Creates run folder: `runs/2025-10-31_14-20_cifar10_simplenet_amp/`
-- Saves frozen config to `cfg.yaml`
-- Sets up CSV logger for metrics
-
-#### **Section C — Train**
+#### **Section B — Data Loading & Cleaning**
 
 | Cell | Description | Duration |
 |------|-------------|----------|
-| C0 | Set seed & device | <1 sec |
-| C1 | Load CIFAR-10 dataset | ~1-2 min (first run only; downloads dataset) |
-| C2 | Initialize model & optimizer | <1 sec |
-| C3 | Training loop (5 epochs) | ~50 sec (T4) / ~20 sec (A100) |
+| B0 | Load raw WHO CSV files | ~5 sec |
+| B1 | Run data cleaning pipeline | ~10 sec |
+| B2 | Build sample attrition table | <1 sec |
 
 **What happens:**
-- Downloads CIFAR-10 to `data/raw/` (cached for future runs)
-- Trains `SimpleNet` (3-layer CNN) on 50,000 train images
-- Validates on 10,000 test images
-- Saves checkpoints every epoch to `checkpoints/`
-- Logs metrics to `metrics.csv`
+- Loads `TB_outcomes_2026-04-04.csv`, `TB_burden_countries_2026-04-04.csv`, `TB_data_dictionary_2026-04-04.csv`, `TB_notifications_2026-04-04.csv`, and `TB_provisional_notifications_2026-04-04.csv` (as needed)
+- Merges on `(iso3, year)`, applies filters (2012–2023, `rel_with_new_flg == 1`, `cohort ≥ 50`)
+- Constructs `success`, `cohort`, standardized predictors, region/country indices
+- Locks the main-analysis table for all subsequent model fitting
+- Produces attrition table showing row/country/year counts at each filter step
 
-**Sample output:**
-```
-Epoch 01/05 | Train: loss=1.5234 acc=0.4521 | Val: loss=1.3456 acc=0.5234
-Epoch 02/05 | Train: loss=1.2345 acc=0.5678 | Val: loss=1.1234 acc=0.6012
-Epoch 03/05 | Train: loss=1.0123 acc=0.6345 | Val: loss=0.9876 acc=0.6543
-Epoch 04/05 | Train: loss=0.8765 acc=0.6890 | Val: loss=0.8765 acc=0.6890
-Epoch 05/05 | Train: loss=0.7654 acc=0.7234 | Val: loss=0.8123 acc=0.7012
-
-[DONE] Training complete! Best val acc: 0.7012
-```
-
-#### **Section D — Inspect**
+#### **Section C — Exploratory Data Analysis**
 
 | Cell | Description |
 |------|-------------|
-| D0 | Show run folder structure |
-| D1 | Display metrics (table & pivot) |
+| C0 | Descriptive summaries, distributions, temporal trends, bivariate plots |
 
 **What you'll see:**
+- Cohort size distribution histogram
+- Success rate distribution (overall and by WHO region)
+- Temporal trend plots stratified by region
+- Correlation matrix among predictors
+- Country-level spread assessment
+
+#### **Section D — MCMC Modeling with JAGS**
+
+| Cell | Description | Duration |
+|------|-------------|----------|
+| D0 | Create timestamped run folder, set MCMC config | <1 sec |
+| D1 | Fit Model 1: Binomial Logistic | ~5-15 min |
+| D2 | Fit Model 2: Beta-Binomial | ~10-30 min |
+| D3 | Fit Model 3: Hierarchical Beta-Binomial | ~15-45 min |
+
+**What happens:**
+- Each model is defined as a JAGS model string
+- Data list prepared for JAGS: `Y`, `n`, predictor matrix `X`, `region[]`, `country[]`
+- MCMC: 4 chains × 4,000 burn-in × 8,000 post-burn-in iterations
+- Posterior draws saved to Drive as `.rds` files
+
+**MCMC settings (configurable in D0):**
+```r
+mcmc_cfg <- list(
+  n_chains   = 4,
+  n_burnin   = 4000,
+  n_iter     = 8000,
+  n_thin     = 1,
+  seed       = 42
+)
 ```
-2025-10-31_14-20_cifar10_simplenet_amp/
-  cfg.yaml (0.2 KB)
-  metrics.csv (0.5 KB)
-  checkpoints/
-    best.pt (245.3 KB)
-    epoch_001.pt (245.3 KB)
-    ...
-```
+
+#### **Section E — MCMC Diagnostics**
+
+| Cell | Description |
+|------|-------------|
+| E0 | Trace plots, density plots, ACF, R-hat, ESS, Geweke |
+
+**Target thresholds:**
+- R-hat < 1.01 (acceptable: < 1.05)
+- ESS > 400 per key parameter
+
+#### **Section F — Posterior Inference & Model Comparison**
+
+| Cell | Description |
+|------|-------------|
+| F0 | Posterior summaries: means, medians, 95% CIs, HPD intervals |
+| F1 | Posterior predictive checks: 4 test quantities |
+| F2 | DIC model comparison (observed-data log-likelihood) |
+
+**Key DIC note:** For Models 2 & 3, DIC is computed from the beta-binomial log-PMF (not JAGS's default conditional DIC), ensuring valid cross-model comparison.
+
+#### **Section G — Parameter Recovery**
+
+| Cell | Description | Duration |
+|------|-------------|----------|
+| G0 | Simulate 50 datasets per model, refit, evaluate coverage | ~hours |
+
+#### **Section H — Frequentist Comparison (Bonus)**
+
+| Cell | Description |
+|------|-------------|
+| H0 | GLM (M1), VGAM beta-binomial (M2), GLMM (M3) |
+
+#### **Section I — Sensitivity Analyses**
+
+| Cell | Description |
+|------|-------------|
+| I0 | 5 sensitivity checks (cohort threshold, TB-HIV, prior variants, post-2021 definitions) |
+
+#### **Section J — Save Results**
+
+| Cell | Description |
+|------|-------------|
+| J0 | Summary of all outputs saved to Drive, session info |
 
 ---
 
@@ -136,281 +172,174 @@ Epoch 05/05 | Train: loss=0.7654 acc=0.7234 | Val: loss=0.8123 acc=0.7012
 
 ### Folder Structure in Drive
 
-After running, check `MyDrive/ml-colab-agentic/`:
+After running, check `MyDrive/Projects/FSL_2_Final_Project/`:
 
 ```
-ml-colab-agentic/
+FSL_2_Final_Project/
 ├── data/
-│   └── raw/
-│       └── cifar-10-batches-py/    # CIFAR-10 dataset (cached)
+│   ├── data_raw/                       # WHO CSV files
+│   └── data_processed/                 # Locked analysis table
 ├── runs/
-│   └── 2025-10-31_14-20_cifar10_simplenet_amp/
-│       ├── cfg.yaml                # Frozen config
-│       ├── metrics.csv             # Train/val metrics
-│       ├── checkpoints/
-│       │   ├── best.pt             # Best model (by val acc)
-│       │   ├── epoch_001.pt
-│       │   └── epoch_005.pt
-│       ├── plots/                  # (empty for now)
-│       ├── artifacts/              # (empty for now)
-│       └── cache/                  # (empty for now)
-└── latest/
-    └── run/                        # Pointer to this run
+│   └── 2026-04-05_14-30_bayesian_tb/   # Timestamped run
+│       ├── mcmc_config.yaml            # Frozen MCMC settings
+│       ├── mcmc_output/                # Posterior draws (.rds)
+│       ├── plots/                      # Diagnostic & PPC figures
+│       ├── diagnostics/                # Convergence results
+│       └── tables/                     # Summary tables
+└── output/                             # Final polished outputs
 ```
 
-### Metrics CSV
+### Key Output Files
 
-Open `metrics.csv` in Google Sheets or view in notebook (Section D1):
-
-| split | epoch | metric | value |
-|-------|-------|--------|-------|
-| train | 1 | loss | 1.5234 |
-| train | 1 | acc | 0.4521 |
-| val | 1 | loss | 1.3456 |
-| val | 1 | acc | 0.5234 |
-| ... | ... | ... | ... |
+| File | Description |
+|------|-------------|
+| `mcmc_config.yaml` | Frozen MCMC settings for this run |
+| `mcmc_output/model1_samples.rds` | Model 1 posterior draws |
+| `mcmc_output/model2_samples.rds` | Model 2 posterior draws |
+| `mcmc_output/model3_samples.rds` | Model 3 posterior draws |
+| `tables/posterior_summaries.csv` | Parameter estimates and intervals |
+| `tables/dic_comparison.csv` | DIC values for all three models |
+| `plots/trace_*.png` | MCMC trace plots |
+| `plots/ppc_*.png` | Posterior predictive check figures |
 
 ---
 
-## Next Steps
+## Customization
 
-### 1. Modify the Config
+### Adjust MCMC Settings
 
-In **Section B**, cell B0, edit the `CFG` dict:
+In **Section D**, cell D0, modify `mcmc_cfg`:
 
-```python
-CFG = {
-    "seed": 42,
-    "epochs": 10,           # ← Train longer
-    "batch_size": 64,       # ← Smaller batch if OOM
-    "lr": 5e-4,             # ← Lower learning rate
-    "dataset": "CIFAR10",
-    "data_root": f"{DATA_DIR}/raw",
-    "num_workers": 2,
-    "amp": True,            # ← Mixed precision (faster)
-}
+```r
+mcmc_cfg <- list(
+  n_chains   = 4,       # Number of MCMC chains
+  n_burnin   = 4000,    # Burn-in iterations (increase if mixing poor)
+  n_iter     = 8000,    # Post-burn-in iterations per chain
+  n_thin     = 1,       # Thinning (increase if memory issues)
+  seed       = 42       # Random seed
+)
 ```
 
-Then re-run **Section B → C → D**.
+### Change Year Window
 
-### 2. Edit Code Locally
+In **Section B**, modify the cleaning pipeline:
 
-**Workflow:**
-1. Clone repo locally:
-   ```bash
-   git clone https://github.com/armanfeili/ml-colab-agentic.git
-   ```
-
-2. Open in VS Code:
-   ```bash
-   cd ml-colab-agentic
-   code .
-   ```
-
-3. Edit `src/utils.py` (e.g., change model architecture)
-
-4. Commit and push:
-   ```bash
-   git add .
-   git commit -m "feat: add dropout to SimpleNet"
-   git push
-   ```
-
-5. In Colab, re-run **Section A2** (Clone/Update) to pull latest code
-
-6. Re-run training with updated code
-
-### 3. Add Custom Dataset
-
-1. **Add loader in `src/utils.py`:**
-   ```python
-   def prepare_dataloaders_custom(root, batch_size, num_workers):
-       # Load your dataset
-       train_dataset = ...
-       test_dataset = ...
-       
-       train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-       test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
-       
-       return train_loader, test_loader
-   ```
-
-2. **Update notebook (Section C1):**
-   ```python
-   train_dl, test_dl = prepare_dataloaders_custom(
-       root=CFG["data_root"],
-       batch_size=CFG["batch_size"],
-       num_workers=CFG["num_workers"],
-   )
-   ```
-
-3. **Update config:**
-   ```python
-   CFG = {
-       "dataset": "CustomDataset",
-       # ...
-   }
-   ```
-
----
-
-## Customization Examples
-
-### Train Faster (Mixed Precision)
-
-Already enabled by default (`amp: True`). Speeds up training by ~2× on T4.
-
-### Save Plots
-
-Add after training loop (Section C3):
-
-```python
-import matplotlib.pyplot as plt
-
-# Load metrics
-df = pd.read_csv(METRICS_CSV)
-train_loss = df[(df.split == "train") & (df.metric == "loss")]["value"]
-val_loss = df[(df.split == "val") & (df.metric == "loss")]["value"]
-
-# Plot
-plt.plot(train_loss, label="Train")
-plt.plot(val_loss, label="Val")
-plt.xlabel("Epoch")
-plt.ylabel("Loss")
-plt.legend()
-plt.savefig(f"{RUN_DIR}/plots/loss.png")
-plt.show()
+```r
+# Default: 2012–2023
+# If early years are sparse, shift:
+dat <- dat %>% filter(year >= 2013, year <= 2023)
 ```
 
-### Use Different Model
+### Modify Priors
 
-In `src/utils.py`, add new model:
+In **Section D**, edit the JAGS model strings:
 
-```python
-class ResNet18Custom(nn.Module):
-    def __init__(self, num_classes=10):
-        super().__init__()
-        import torchvision.models as models
-        self.model = models.resnet18(pretrained=False)
-        self.model.fc = nn.Linear(512, num_classes)
-    
-    def forward(self, x):
-        return self.model(x)
-```
+```r
+# Default: weakly informative
+beta0 ~ dnorm(0, 1/(2.5*2.5))
 
-In notebook (Section C2):
-```python
-model = ResNet18Custom(num_classes=10).to(device)
+# More informative:
+beta0 ~ dnorm(0, 1/(1.0*1.0))
+
+# Alternative phi prior:
+phi ~ dgamma(1, 0.1)  # instead of dgamma(2, 0.1)
 ```
 
 ---
 
 ## Troubleshooting
 
-### GPU Not Available
+### Notebook Opens in Python Mode
 
-**Error:**
-```
-Device: cpu | CUDA available: False
-```
+**Symptom:** Cells show Python syntax errors
 
 **Fix:**
-1. Runtime → Change runtime type → GPU → Save
+The notebook kernel is set to `ir` (R). If Colab doesn't auto-detect:
+1. Runtime → Change runtime type → **R** → Save
 2. Re-run all cells
 
-### Drive Mount Fails
+### JAGS Installation Fails
 
 **Error:**
 ```
-MessageError: Error: credential propagation was unsuccessful
+E: Unable to locate package jags
 ```
 
 **Fix:**
-1. Click the link in the cell output
-2. Authorize access to Google Drive
-3. Copy the code and paste back into Colab
+```r
+system("apt-get update -qq && apt-get install -y -qq jags")
+```
 
-### Out of Memory (OOM)
+### R Package Install Fails
 
 **Error:**
 ```
-RuntimeError: CUDA out of memory. Tried to allocate X.XX GiB
+ERROR: installation of package 'rjags' had non-zero exit status
 ```
 
 **Fix:**
-Reduce batch size in config:
-```python
-CFG = {
-    "batch_size": 32,  # Was 128
-    # ...
-}
-```
+1. Ensure JAGS is installed first (cell A3 handles this)
+2. Re-run the package installation cell
+3. If still failing: `install.packages("rjags", repos = "https://cloud.r-project.org")`
 
-### CIFAR-10 Download Slow
+### MCMC Convergence Issues
 
-**First run only** — downloads ~160 MB to Drive. Subsequent runs reuse cached data.
+**Symptom:** R-hat > 1.05 or ESS < 100
 
-**Speed up:**
-- Use faster internet connection
-- Wait patiently (1-2 min typical)
+**Fix:**
+1. Increase burn-in: `n_burnin = 8000`
+2. Increase iterations: `n_iter = 16000`
+3. Check predictor standardization
+4. For Model 3: try non-centered parameterization (`u_i = sigma_u * z_i`, `z_i ~ N(0,1)`)
 
-### Module Not Found
+### Drive Disconnects During Long Run
+
+**Fix:**
+- Keep the Colab tab active (don't close it)
+- Save intermediate results to Drive frequently
+- For very long runs, consider using Colab Pro for longer session limits
+
+### Memory Errors
 
 **Error:**
 ```
-ModuleNotFoundError: No module named 'yaml'
+Error: cannot allocate vector of size X.X Gb
 ```
 
 **Fix:**
-Re-run **Section A3** (Install dependencies).
-
-### Git Pull Fails
-
-**Error:**
-```
-fatal: couldn't find remote ref main
-```
-
-**Fix:**
-Check branch name in your repo (might be `master` instead of `main`):
-```python
-subprocess.run(["git", "-C", REPO_PATH, "checkout", "master"], check=True)
-```
+- Increase thinning: `n_thin = 5` (keeps every 5th draw)
+- Monitor fewer parameters
+- For parameter recovery: reduce from 50 to 30 simulated datasets
 
 ---
 
-## Tips for Success
-
-### Best Practices
-
-- **First run:** Just run all cells to verify everything works
-- **Iterate:** Modify config → re-run training → inspect results
-- **Version control:** Edit code locally → commit → pull in Colab
-- **Cache data:** Keep datasets in `data/raw/` — downloads only once
-
-### Expected Timings (T4 GPU)
+## Expected Timings (Colab Standard)
 
 | Task | Duration |
 |------|----------|
-| Setup (Section A) | ~45 sec |
-| Config (Section B) | <2 sec |
-| Load CIFAR-10 (first time) | ~1-2 min |
-| Load CIFAR-10 (cached) | ~10 sec |
-| Train 1 epoch | ~10 sec |
-| Train 5 epochs | ~50 sec |
-| Inspect (Section D) | <1 sec |
-| **Total (first run)** | ~3-4 min |
-| **Total (subsequent runs)** | ~2 min |
+| Setup (Section A) | ~3-5 min (first time); ~30 sec (cached) |
+| Data loading & cleaning (Section B) | ~15 sec |
+| EDA (Section C) | ~30 sec |
+| Model 1 MCMC (Section D) | ~5-15 min |
+| Model 2 MCMC (Section D) | ~10-30 min |
+| Model 3 MCMC (Section D) | ~15-45 min |
+| Diagnostics (Section E) | ~1-2 min |
+| Inference & DIC (Section F) | ~5-10 min |
+| Parameter Recovery (Section G) | ~2-6 hours |
+| Frequentist (Section H) | ~2-5 min |
+| Sensitivity (Section I) | ~30 min - 2 hours |
+| **Total (without recovery)** | **~1-2 hours** |
+| **Total (with recovery)** | **~4-8 hours** |
 
 ---
 
 ## What's Next?
 
-1. **Read the main [README](../README.md)** for architecture overview
-2. **Explore `src/utils.py`** to understand training loop
-3. **Modify the model** and experiment with hyperparameters
-4. **Add your own dataset** following examples above
-5. **Use GitHub Copilot** locally for AI-assisted development
+1. **Read the full [PROJECT_PLAN.md](PROJECT_PLAN.md)** for detailed methodology
+2. **Follow the [TODO_PLAN.md](TODO_PLAN.md)** checklist for execution
+3. **Upload WHO data files** to `data/data_raw/` (in Drive or the repo)
+4. **Run the notebook** end-to-end
+5. **Write the final report** using outputs from Drive
 
 ---
 

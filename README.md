@@ -1,13 +1,20 @@
-# ML Colab Agentic Template
+# Bayesian Modeling of Cross-Country TB Treatment Success
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/armanfeili/FSL_2_Final_Project/blob/main/notebooks/main.ipynb)
 
-**This is a minimal template to combine the power of GitHub Copilot in VS Code with GPU training in Google Colab.**
+**A Fully Bayesian MCMC Analysis of WHO Data, 2012–2023**
 
-- **Code on GitHub** — version control with Copilot support
-- **Storage on Google Drive** — datasets, runs, checkpoints persist across sessions
-- **Run in Colab** — free T4/A100 GPUs, no local setup required
-- **Reproducible** — frozen configs, deterministic seeds, structured outputs
+> **Course:** Fundamentals of Statistical Learning II — M.Sc. in Data Science, a.y. 2025–2026
+
+---
+
+## Project Overview
+
+This project develops a fully Bayesian analysis of WHO tuberculosis country-year data to study treatment success in 2012–2023. The central question is:
+
+> **Which Bayesian model best explains and predicts country-year TB treatment success: a binomial logistic model, a beta-binomial model, or a hierarchical beta-binomial model?**
+
+The analysis compares three models of increasing complexity, fitted via MCMC (JAGS), to determine whether simple binomial sampling variability is sufficient or whether overdispersion and country-level heterogeneity must be explicitly modeled.
 
 ---
 
@@ -15,34 +22,36 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  LOCAL (VS Code + Copilot)                                      │
-│  ├─ Edit src/utils.py, notebooks/                              │
-│  ├─ Commit & push to GitHub                                    │
-│  └─ No data/runs stored here                                   │
+│  LOCAL (VS Code + AI Assistant)                                  │
+│  ├─ Edit scripts/, notebooks/, models/                          │
+│  ├─ Commit & push to GitHub                                     │
+│  └─ No data/runs stored here                                    │
 └─────────────────────────────────────────────────────────────────┘
                             ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│  COLAB VM (/content/)                                           │
-│  ├─ Clone repo from GitHub (code only)                         │
-│  ├─ Mount Google Drive at /content/drive                       │
-│  └─ Run training → outputs to Drive                            │
+│  GOOGLE COLAB (R Runtime)                                        │
+│  ├─ Clone repo from GitHub (code only)                          │
+│  ├─ Mount Google Drive at /content/drive                        │
+│  ├─ Install R packages (rjags, coda, tidyverse, etc.)           │
+│  ├─ Install JAGS (system dependency)                            │
+│  └─ Run analysis → outputs to Drive                             │
 └─────────────────────────────────────────────────────────────────┘
                             ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│  GOOGLE DRIVE (MyDrive/ml-colab-agentic/)                      │
-│  ├─ data/raw/                  ← datasets cached here          │
-│  ├─ data/processed/             ← preprocessed data            │
-│  ├─ runs/<timestamp_dataset_model>/  ← per-run outputs         │
-│  │   ├─ cfg.yaml               ← frozen config                 │
-│  │   ├─ metrics.csv            ← epoch-wise metrics            │
-│  │   ├─ checkpoints/           ← model weights (.pt files)     │
-│  │   ├─ plots/                 ← learning curves, etc.         │
-│  │   └─ artifacts/             ← confusion matrices, etc.      │
-│  └─ latest/run/                ← pointer to most recent run    │
+│  GOOGLE DRIVE (MyDrive/Projects/FSL_2_Final_Project/)           │
+│  ├─ data/data_raw/             ← WHO CSV files                  │
+│  ├─ data/data_processed/       ← Locked main-analysis table     │
+│  ├─ runs/<timestamp>/          ← Per-run MCMC outputs           │
+│  │   ├─ mcmc_config.yaml       ← Frozen MCMC settings           │
+│  │   ├─ mcmc_output/           ← Posterior draws (.rds)          │
+│  │   ├─ plots/                 ← Diagnostics, PPC figures        │
+│  │   ├─ diagnostics/           ← Convergence results             │
+│  │   └─ tables/                ← Summary tables                  │
+│  └─ output/                    ← Final polished outputs          │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-**Key Principle:** Code travels through Git. Data stays in Drive.
+**Key Principle:** Code travels through Git. Data and results stay in Drive.
 
 ---
 
@@ -51,182 +60,139 @@
 ### 1. Open in Colab
 Click the badge above or go to:
 ```
-https://colab.research.google.com/github/armanfeili/ml-colab-agentic/blob/main/notebooks/01_train.ipynb
+https://colab.research.google.com/github/armanfeili/FSL_2_Final_Project/blob/main/notebooks/main.ipynb
 ```
 
-### 2. Enable GPU
-- **Runtime** → **Change runtime type** → **GPU** (T4 or A100) → **Save**
+> **Note:** The notebook uses an **R kernel** — Colab will automatically launch the R runtime.
+
+### 2. Mount Google Drive
+- Click the **folder icon** in the Colab sidebar → **Mount Drive**
+- Or run cell A0 and follow the prompt
 
 ### 3. Run All Cells
-- **Section A**: Mounts Drive, clones repo, installs dependencies
-- **Section B**: Creates timestamped run folder, freezes config
-- **Section C**: Trains model (5 epochs × ~10 sec = ~1 min)
-- **Section D**: Shows metrics and artifacts
-
-**First run downloads CIFAR-10** (~160 MB) to Drive — subsequent runs reuse it.
+- **Section A**: Mounts Drive, clones repo, installs R packages + JAGS
+- **Section B**: Loads WHO data, applies cleaning pipeline, locks analysis table
+- **Section C**: Exploratory data analysis
+- **Section D**: Fits all three JAGS models, saves MCMC output
+- **Section E**: MCMC diagnostics (trace plots, R-hat, ESS)
+- **Section F**: Posterior inference, predictive checks, DIC comparison
+- **Section G**: Parameter recovery simulation
+- **Section H**: Frequentist comparison (bonus)
+- **Section I**: Sensitivity analyses
+- **Section J**: Saves all results to Drive
 
 ---
 
-## Repository Structure (Code Only)
+## Repository Structure
 
 ```
-ml-colab-agentic/
+FSL_2_Final_Project/
 ├── notebooks/
-│   └── 01_train.ipynb       # Colab entry point (run this!)
+│   └── main.ipynb               # Colab entry point (R kernel)
+├── scripts/                     # Numbered R scripts (for local runs)
 ├── src/
-│   ├── __init__.py
-│   └── utils.py             # Training loop, model, dataloaders
-├── tests/
-│   └── test_smoke.py        # Basic smoke tests
-├── docs/
-│   └── QUICK_START.md       # Detailed setup guide
-├── requirements.txt         # Dependencies (torch, pyyaml, etc.)
-├── LICENSE
-└── README.md                # This file
-```
-
-**Not in repo:** `data/`, `runs/`, `outputs/`, `checkpoints/`, `*.pt` (all in Drive or `.gitignore`)
-
----
-
-## Google Drive Structure (Storage Only)
-
-Created automatically on first run:
-
-```
-MyDrive/ml-colab-agentic/
+│   └── models/                  # JAGS model files (.jags)
 ├── data/
-│   ├── raw/                          # Downloaded datasets (e.g., CIFAR-10)
-│   └── processed/                    # Preprocessed datasets
-├── runs/
-│   ├── 2025-10-31_14-20_cifar10_simplenet_amp/
-│   │   ├── cfg.yaml                  # Frozen config for this run
-│   │   ├── metrics.csv               # Train/val loss & accuracy per epoch
-│   │   ├── checkpoints/
-│   │   │   ├── best.pt               # Best model (by val accuracy)
-│   │   │   ├── epoch_001.pt
-│   │   │   └── epoch_005.pt
-│   │   ├── plots/                    # Learning curves, etc.
-│   │   ├── artifacts/                # Test predictions, confusion matrices
-│   │   └── cache/                    # Temporary files
-│   └── 2025-11-01_09-15_cifar10_simplenet_amp/  # Next run
-└── latest/
-    └── run/                          # Pointer to most recent run
+│   ├── data_raw/                # Original WHO CSVs (gitignored)
+│   └── data_processed/          # Locked analysis table (gitignored)
+├── docs/
+│   ├── PROJECT_PLAN.md          # Full project plan & methodology
+│   ├── TODO_PLAN.md             # Step-by-step execution checklist
+│   └── QUICK_START.md           # Detailed setup guide
+├── report/                      # Final PDF report source
+├── tests/                       # Validation scripts
+├── requirements.txt             # R package list
+├── .gitignore
+├── LICENSE
+└── README.md                    # This file
 ```
+
+**Not in repo:** Raw data, processed data, MCMC outputs, checkpoints — all in Drive or `.gitignore`d.
 
 ---
 
-## How It Works
+## Statistical Models
 
-### A. Setup (Notebook Section A)
-1. **Mount Drive** → `/content/drive/MyDrive/ml-colab-agentic/`
-2. **Clone/pull repo** → `/content/ml-colab-agentic/` (fresh code from GitHub)
-3. **Install dependencies** → `pip install -r requirements.txt`
-4. **Import utilities** → `from src.utils import ...`
+Three Bayesian models are compared on the same locked country-year dataset:
 
-### B. Run Config (Section B)
-```python
-CFG = {
-    "seed": 42,
-    "epochs": 5,
-    "batch_size": 128,
-    "lr": 1e-3,
-    "dataset": "CIFAR10",
-    "data_root": f"{DATA_DIR}/raw",  # Points to Drive
-    "num_workers": 2,
-    "amp": True,
-}
-```
-- Creates timestamped folder: `runs/2025-10-31_14-20_cifar10_simplenet_amp/`
-- Saves `cfg.yaml` to Drive for reproducibility
+| Model | Likelihood | Overdispersion | Country Effects | Key Test |
+|-------|-----------|----------------|-----------------|----------|
+| **M1** — Binomial Logistic | Binomial | ✗ | ✗ | Is ordinary binomial variability sufficient? |
+| **M2** — Beta-Binomial | Beta-Binomial | ✓ (φ) | ✗ | Does extra-binomial dispersion improve fit? |
+| **M3** — Hierarchical Beta-Binomial | Beta-Binomial | ✓ (φ) | ✓ (u_i, σ_u) | Do persistent country effects remain? |
 
-### C. Train (Section C)
-- Loads CIFAR-10 from `data_root` (downloads if missing)
-- Trains `SimpleNet` (3-layer CNN) for 5 epochs
-- Saves checkpoints to `runs/<run_id>/checkpoints/`
-- Logs metrics to `runs/<run_id>/metrics.csv`
-
-### D. Inspect (Section D)
-- Shows metrics as pandas DataFrame
-- Lists all artifacts in Drive folder
+All models use:
+- **Response:** Treatment success counts `Y_it` out of cohort `n_it`
+- **Predictors:** Year, incidence, mortality, case detection (standardized), WHO region (fixed effects)
+- **Priors:** Weakly informative Normal(0, 2.5²) for coefficients; Gamma(2, 0.1) for φ; Half-Normal(0, 1) for σ_u
+- **MCMC:** 4 chains × 8,000 post-burn-in iterations via JAGS (`rjags`)
 
 ---
 
-## Customization
+## Data Sources
 
-### Change Dataset
-1. Edit `CFG["dataset"]` in notebook
-2. Add loader in `src/utils.py`:
-```python
-def prepare_dataloaders_imagenet(root, batch_size, num_workers):
-    # Your custom dataset logic
-    return train_loader, test_loader
-```
+| File | Role |
+|------|------|
+| `TB_outcomes_2026-04-04.csv` | Treatment outcomes (response variable) |
+| `TB_burden_countries_2026-04-04.csv` | Epidemiological burden (predictors) |
+| `TB_data_dictionary_2026-04-04.csv` | Variable definitions and metadata |
+| `TB_notifications_2026-04-04.csv` | TB notifications (if applicable) |
+| `TB_provisional_notifications_2026-04-04.csv` | Provisional notifications (if applicable) |
 
-### Train Longer
-```python
-CFG = {
-    "epochs": 20,
-    "batch_size": 64,  # Reduce if OOM
-}
-```
-
-### Use Your Own Model
-In `src/utils.py`, replace `SimpleNet` or add new class:
-```python
-class MyModel(nn.Module):
-    def __init__(self, num_classes=10):
-        super().__init__()
-        # Your architecture
-```
-
-Then in notebook:
-```python
-model = MyModel(num_classes=10).to(device)
-```
+**Unit of analysis:** One row = one country-year. All models are fitted on the **same locked main-analysis table**.
 
 ---
 
-## Local Development (Optional)
+## R Package Stack
 
-### 1. Clone Repo
-```bash
-git clone https://github.com/armanfeili/ml-colab-agentic.git
-cd ml-colab-agentic
-```
+| Category | Packages |
+|----------|----------|
+| **MCMC & Bayesian** | `rjags`, `coda`, `MCMCvis` |
+| **Data wrangling** | `tidyverse`, `data.table` |
+| **Visualization** | `ggplot2`, `patchwork`, `corrplot` |
+| **Frequentist** | `lme4`, `VGAM` |
+| **Utilities** | `yaml`, `knitr`, `car` |
 
-### 2. Install Dependencies
-```bash
-pip install -r requirements.txt
-```
-
-### 3. Edit Code Locally
-- Use **VS Code** with **GitHub Copilot** for AI-assisted development
-- Modify `src/utils.py`, add features to notebook
-- Commit changes:
-```bash
-git add .
-git commit -m "feat: add custom dataset loader"
-git push
-```
-
-### 4. Pull in Colab
-Next Colab run (Section A2) automatically pulls latest code from GitHub.
+System dependency: **JAGS** (installed automatically in Colab via `apt-get`).
 
 ---
 
-## Tips & Best Practices
+## Analysis Pipeline
 
-### Best Practices
-- **Edit code locally** (VS Code + Copilot) → commit → pull in Colab
-- **Store all data/runs in Drive** → survives Colab session resets
-- **Use timestamped run folders** → never overwrite previous experiments
-- **Check GPU allocation** → Runtime → Change runtime type → GPU (T4 or A100)
+| Phase | Description | Notebook Section |
+|-------|-------------|------------------|
+| 0 | Project setup & reproducibility | A |
+| 1 | Research framing & design freeze | — (documented in `docs/`) |
+| 2–4 | Data intake, cleaning, quality checks | B |
+| 5 | Exploratory data analysis | C |
+| 6 | Prior design & prior predictive checks | D |
+| 7–8 | JAGS model coding, pilot testing, full MCMC | D |
+| 9 | Posterior inference | F |
+| 10 | Posterior predictive checks | F |
+| 11 | Parameter recovery simulation | G |
+| 12 | DIC model comparison | F |
+| 13 | Frequentist comparison (bonus) | H |
+| 14 | Sensitivity analyses | I |
+| 15–17 | Report writing, validation, submission | J |
 
-### Common Pitfalls to Avoid
-- **Don't commit large files** (`.pt`, datasets) → they're `.gitignore`d
-- **Don't edit code in Colab UI** → changes won't sync to GitHub
-- **Don't rely on Colab VM storage** → it's ephemeral (deleted after 12h idle)
+Full details in [docs/TODO_PLAN.md](docs/TODO_PLAN.md).
+
+---
+
+## Course Requirements Coverage
+
+| # | Requirement | Status |
+|---|-------------|--------|
+| 1 | Fully Bayesian analysis using MCMC | ✅ JAGS via `rjags` |
+| 2 | Real data from public sources | ✅ WHO TB data |
+| 3 | ≥ 2 alternative statistical models | ✅ Three models |
+| 4 | Parameter recovery with simulated data | ✅ 50 datasets per model |
+| 5 | MCMC output illustration | ✅ Trace, density, ACF plots |
+| 6 | Bayesian estimation, hypothesis testing, predictions | ✅ Posteriors, directional probabilities, PPC |
+| 7 | Model comparison via DIC | ✅ Observed-data DIC |
+| 8 | Recover observed data features (PPC) | ✅ Four test quantities |
+| B1 | **Bonus:** Formal model checking diagnostics | ✅ Gelman-Rubin, Geweke, Heidelberger-Welch |
+| B2 | **Bonus:** Frequentist comparison | ✅ GLM, VGAM, GLMM analogues |
 
 ---
 
@@ -234,49 +200,47 @@ Next Colab run (Section A2) automatically pulls latest code from GitHub.
 
 | Issue | Solution |
 |-------|----------|
-| `CUDA not available` | Runtime → Change runtime type → GPU (T4) |
-| `Drive mount fails` | Re-run cell A0, authenticate in popup |
-| `OOM error` | Reduce `batch_size` (try 64 or 32) |
-| `Git pull fails` | Check repo URL in A2, ensure `main` branch exists |
-| `Module not found` | Re-run A3 (`pip install -r requirements.txt`) |
-| `CIFAR-10 download slow` | First run only; cached in `data/raw/` for future runs |
+| Notebook opens with Python runtime | Kernel is set to `ir` (R) — Colab should auto-detect. If not: Runtime → Change runtime type → R |
+| Drive mount fails | Click folder icon in sidebar → Mount Drive. Re-authorize if prompted |
+| JAGS not found | Re-run cell A3 (installs JAGS via `apt-get`) |
+| Package install fails | Check internet; re-run cell A3 |
+| MCMC slow / memory issues | Reduce `n_iter` or increase `n_thin` in D0 config |
+| R-hat > 1.05 | Extend burn-in, re-check standardization, try non-centered parameterization for M3 |
 
 ---
 
-## What's Different About This Template?
+## Local Development (Optional)
 
-1. **Drive-first storage** — no repo clutter with datasets/checkpoints
-2. **Code-only Git** — clean version control (12 files tracked vs. typical 100+)
-3. **Reproducible runs** — timestamped folders + frozen YAML configs
-4. **Copilot-ready** — develop locally, run remotely with ease
-5. **Zero local setup** — works entirely in browser (Colab)
+```bash
+# Clone
+git clone https://github.com/armanfeili/FSL_2_Final_Project.git
+cd FSL_2_Final_Project
+
+# Run R scripts locally (requires R + JAGS installed)
+Rscript scripts/00_setup.R
+Rscript scripts/01_load_and_inspect_data.R
+# ... etc.
+```
+
+Edit locally → commit → push → next Colab run pulls latest code automatically.
 
 ---
 
-## Contributing
+## Key Documentation
 
-1. Fork the repo
-2. Create a feature branch: `git checkout -b feat/amazing-feature`
-3. Commit changes: `git commit -m "feat: add amazing feature"`
-4. Push to branch: `git push origin feat/amazing-feature`
-5. Open a Pull Request
+- [docs/QUICK_START.md](docs/QUICK_START.md) — Detailed setup and walkthrough
+- [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md) — Full project plan & methodology
+- [docs/TODO_PLAN.md](docs/TODO_PLAN.md) — Step-by-step execution checklist
+- [notebooks/main.ipynb](notebooks/main.ipynb) — Main Colab notebook (R kernel)
 
 ---
 
 ## Creator
 
-Created by **[Arman Feili](https://github.com/armanfeili)** — Full-Stack Developer, Data Scientist
+Created by **[Arman Feili](https://github.com/armanfeili)** — M.Sc. in Data Science, Sapienza University of Rome
 
 ---
 
 ## License
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
-
----
-
-## See Also
-
-- [docs/QUICK_START.md](docs/QUICK_START.md) — Detailed walkthrough
-- [notebooks/01_train.ipynb](notebooks/01_train.ipynb) — Main training notebook
-- [src/utils.py](src/utils.py) — Core training utilities
