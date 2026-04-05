@@ -18,68 +18,20 @@ The analysis compares three models of increasing complexity, fitted via MCMC (JA
 
 ---
 
-## Architecture
+## Execution Model
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  LOCAL (VS Code + AI Assistant)                                  │
-│  ├─ Edit scripts/, notebooks/, models/                          │
-│  ├─ Commit & push to GitHub                                     │
-│  └─ No data/runs stored here                                    │
-└─────────────────────────────────────────────────────────────────┘
-                            ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  GOOGLE COLAB (R Runtime)                                        │
-│  ├─ Clone repo from GitHub (code only)                          │
-│  ├─ Mount Google Drive at /content/drive                        │
-│  ├─ Install R packages (rjags, coda, tidyverse, etc.)           │
-│  ├─ Install JAGS (system dependency)                            │
-│  └─ Run analysis → outputs to Drive                             │
-└─────────────────────────────────────────────────────────────────┘
-                            ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  GOOGLE DRIVE (MyDrive/Projects/FSL_2_Final_Project/)           │
-│  ├─ data/data_raw/             ← WHO CSV files                  │
-│  ├─ data/data_processed/       ← Locked main-analysis table     │
-│  ├─ runs/<timestamp>/          ← Per-run MCMC outputs           │
-│  │   ├─ mcmc_config.yaml       ← Frozen MCMC settings           │
-│  │   ├─ mcmc_output/           ← Posterior draws (.rds)          │
-│  │   ├─ plots/                 ← Diagnostics, PPC figures        │
-│  │   ├─ diagnostics/           ← Convergence results             │
-│  │   └─ tables/                ← Summary tables                  │
-│  └─ output/                    ← Final polished outputs          │
-└─────────────────────────────────────────────────────────────────┘
-```
+> **`notebooks/main.ipynb` is the sole execution source of truth.**
 
-**Key Principle:** Code travels through Git. Data and results stay in Drive.
+All analysis code lives in a single R-kernel Jupyter notebook. The TODO plan references numbered script stages (00–16); these are *logical stages*, not runnable `.R` files. Each stage maps to a notebook section (A–J). The `scripts/` directory is reserved for optional helper utilities only.
 
----
+The notebook runs identically on **Google Colab** (primary) and **locally** (requires R + JAGS). Two root variables govern all paths:
 
-## Quick Start (3 steps)
+| Variable | Colab | Local |
+|----------|-------|-------|
+| `CODE_ROOT` | `/content/FSL_2_Final_Project` (cloned from GitHub) | Project directory on disk |
+| `STORAGE_ROOT` | Google Drive (`MyDrive/Projects/FSL_2_Final_Project/`) | Same as `CODE_ROOT` |
 
-### 1. Open in Colab
-Click the badge above or go to:
-```
-https://colab.research.google.com/github/armanfeili/FSL_2_Final_Project/blob/main/notebooks/main.ipynb
-```
-
-> **Note:** The notebook uses an **R kernel** — Colab will automatically launch the R runtime.
-
-### 2. Mount Google Drive
-- Click the **folder icon** in the Colab sidebar → **Mount Drive**
-- Or run cell A0 and follow the prompt
-
-### 3. Run All Cells
-- **Section A**: Mounts Drive, clones repo, installs R packages + JAGS
-- **Section B**: Loads WHO data, applies cleaning pipeline, locks analysis table
-- **Section C**: Exploratory data analysis
-- **Section D**: Fits all three JAGS models, saves MCMC output
-- **Section E**: MCMC diagnostics (trace plots, R-hat, ESS)
-- **Section F**: Posterior inference, predictive checks, DIC comparison
-- **Section G**: Parameter recovery simulation
-- **Section H**: Frequentist comparison (bonus)
-- **Section I**: Sensitivity analyses
-- **Section J**: Saves all results to Drive
+All downstream paths (`DATA_RAW`, `OUT_FIG`, etc.) derive from these two roots.
 
 ---
 
@@ -88,18 +40,25 @@ https://colab.research.google.com/github/armanfeili/FSL_2_Final_Project/blob/mai
 ```
 FSL_2_Final_Project/
 ├── notebooks/
-│   └── main.ipynb               # Colab entry point (R kernel)
-├── scripts/                     # Numbered R scripts (for local runs)
-├── src/
-│   └── models/                  # JAGS model files (.jags)
-├── data/
-│   ├── data_raw/                # Original WHO CSVs (gitignored)
-│   └── data_processed/          # Locked analysis table (gitignored)
+│   └── main.ipynb               # Sole execution entry point (R kernel)
+├── data_raw/                    # Original WHO CSVs — single canonical raw-data dir (gitignored)
+├── data_processed/              # Locked main-analysis table (gitignored)
+├── outputs/
+│   ├── figures/                 # All plots (EDA, diagnostics, PPC, recovery)
+│   ├── tables/                  # All CSV/LaTeX tables, version_manifest.csv, git_metadata.yaml
+│   ├── model_objects/           # Saved MCMC posterior draws (.rds)
+│   ├── diagnostics/             # Convergence output files
+│   └── simulations/             # Parameter recovery datasets & results
+├── models/                      # JAGS model files (.jags)
+├── runs/                        # Per-run timestamped MCMC output folders (gitignored)
+├── report/                      # Final PDF report, .Rmd or .tex source
+├── scripts/                     # Optional helper utilities (not the execution path)
+├── notes/
+│   └── decision_log.md          # Frozen choices (year window, predictors, baseline, etc.)
 ├── docs/
 │   ├── PROJECT_PLAN.md          # Full project plan & methodology
 │   ├── TODO_PLAN.md             # Step-by-step execution checklist
 │   └── QUICK_START.md           # Detailed setup guide
-├── report/                      # Final PDF report source
 ├── tests/                       # Validation scripts
 ├── requirements.txt             # R package list
 ├── .gitignore
@@ -107,7 +66,56 @@ FSL_2_Final_Project/
 └── README.md                    # This file
 ```
 
-**Not in repo:** Raw data, processed data, MCMC outputs, checkpoints — all in Drive or `.gitignore`d.
+**Not in repo (gitignored):** `data_raw/`, `data_processed/`, `outputs/`, `runs/`.
+
+---
+
+## How to Run
+
+### On Google Colab (primary)
+
+1. Click the Colab badge above or open: `https://colab.research.google.com/github/armanfeili/FSL_2_Final_Project/blob/main/notebooks/main.ipynb`
+2. Mount Google Drive (sidebar folder icon, or run cell A0)
+3. **Runtime → Run all**
+
+The notebook will clone the repo, install JAGS + R packages, and write all outputs to Drive.
+
+### Locally
+
+```bash
+git clone https://github.com/armanfeili/FSL_2_Final_Project.git
+cd FSL_2_Final_Project
+```
+
+Requirements: R (≥ 4.x), JAGS (≥ 4.x), and the packages listed below. Then open `notebooks/main.ipynb` in VS Code, JupyterLab, or RStudio and run all cells. Outputs are written under the project root.
+
+---
+
+## Analysis Pipeline
+
+> Each row is a *logical stage*, executed as a notebook section — not a separate `.R` script.
+
+| # | Stage | Notebook Section | Purpose |
+|---|-------|------------------|---------|
+| 00 | Setup | **A** | Load packages, seed, paths, helpers |
+| 01 | Load & inspect data | **B0** | Import raw CSVs, audit dimensions & keys |
+| 02 | Build main analysis table | **B1–B2** | Merge, filter, standardize, lock dataset |
+| 03 | EDA | **C** | Exploratory plots & tables |
+| 04 | Prior predictive checks | **D** (pre-fit) | Simulate from priors, verify plausibility |
+| 05 | Fit M1 (binomial) | **D1** | JAGS fit for Model 1 |
+| 06 | Fit M2 (beta-binomial) | **D2** | JAGS fit for Model 2 |
+| 07 | Fit M3 (hierarchical) | **D3** | JAGS fit for Model 3 |
+| 08 | MCMC diagnostics | **E** | Trace plots, R-hat, ESS, convergence tests |
+| 09 | Posterior inference | **F0** | Summaries, intervals, directional probabilities |
+| 10 | Posterior predictive checks | **F1** | Y_rep, test quantities, Bayesian p-values |
+| 11 | Parameter recovery | **G** | Simulate, refit, coverage/bias |
+| 12 | DIC comparison | **F2** | Observed-data log-likelihood DIC |
+| 13 | Frequentist comparison | **H** | GLM, VGAM, GLMM analogues |
+| 14 | Sensitivity analyses | **I** | 5 robustness checks |
+| 15 | Polish outputs | **J** | Final report-ready assets |
+| 16 | Report support outputs | **J** | Export final numbers for abstract/appendix |
+
+Full details in [docs/TODO_PLAN.md](docs/TODO_PLAN.md).
 
 ---
 
@@ -131,15 +139,13 @@ All models use:
 
 ## Data Sources
 
-| File | Role |
-|------|------|
-| `TB_outcomes_2026-04-04.csv` | Treatment outcomes (response variable) |
-| `TB_burden_countries_2026-04-04.csv` | Epidemiological burden (predictors) |
-| `TB_data_dictionary_2026-04-04.csv` | Variable definitions and metadata |
-| `TB_notifications_2026-04-04.csv` | TB notifications (if applicable) |
-| `TB_provisional_notifications_2026-04-04.csv` | Provisional notifications (if applicable) |
+| File | Location | Role |
+|------|----------|------|
+| `TB_outcomes_2026-04-04.csv` | `data_raw/` | Treatment outcomes (response variable) |
+| `TB_burden_countries_2026-04-04.csv` | `data_raw/` | Epidemiological burden (predictors) |
+| `TB_data_dictionary_2026-04-04.csv` | `data_raw/` | Variable definitions and metadata |
 
-**Unit of analysis:** One row = one country-year. All models are fitted on the **same locked main-analysis table**.
+**Unit of analysis:** One row = one country-year. All models are fitted on the **same locked main-analysis table** (`data_processed/main_analysis_table_locked.csv`).
 
 ---
 
@@ -147,35 +153,27 @@ All models use:
 
 | Category | Packages |
 |----------|----------|
-| **MCMC & Bayesian** | `rjags`, `coda`, `MCMCvis` |
+| **MCMC & Bayesian** | `rjags`, `coda`, `MCMCvis`, `bayesplot` |
 | **Data wrangling** | `tidyverse`, `data.table` |
 | **Visualization** | `ggplot2`, `patchwork`, `corrplot` |
-| **Frequentist** | `lme4`, `VGAM` |
+| **Frequentist** | `lme4`, `VGAM`, `aod` |
 | **Utilities** | `yaml`, `knitr`, `car` |
 
 System dependency: **JAGS** (installed automatically in Colab via `apt-get`).
 
 ---
 
-## Analysis Pipeline
+## Reproducibility Outputs
 
-| Phase | Description | Notebook Section |
-|-------|-------------|------------------|
-| 0 | Project setup & reproducibility | A |
-| 1 | Research framing & design freeze | — (documented in `docs/`) |
-| 2–4 | Data intake, cleaning, quality checks | B |
-| 5 | Exploratory data analysis | C |
-| 6 | Prior design & prior predictive checks | D |
-| 7–8 | JAGS model coding, pilot testing, full MCMC | D |
-| 9 | Posterior inference | F |
-| 10 | Posterior predictive checks | F |
-| 11 | Parameter recovery simulation | G |
-| 12 | DIC model comparison | F |
-| 13 | Frequentist comparison (bonus) | H |
-| 14 | Sensitivity analyses | I |
-| 15–17 | Report writing, validation, submission | J |
+The notebook's Section A automatically saves:
 
-Full details in [docs/TODO_PLAN.md](docs/TODO_PLAN.md).
+| File | Location | Contents |
+|------|----------|----------|
+| `version_manifest.csv` | `outputs/tables/` | R version, JAGS version, all package versions |
+| `git_metadata.yaml` | `outputs/tables/` | Repo URL, branch, commit SHA, timestamp |
+| `setup_metadata.yaml` | `outputs/tables/` | Seed, CODE_ROOT, STORAGE_ROOT, all canonical paths |
+
+These files pin the exact environment for every run.
 
 ---
 
@@ -206,23 +204,6 @@ Full details in [docs/TODO_PLAN.md](docs/TODO_PLAN.md).
 | Package install fails | Check internet; re-run cell A3 |
 | MCMC slow / memory issues | Reduce `n_iter` or increase `n_thin` in D0 config |
 | R-hat > 1.05 | Extend burn-in, re-check standardization, try non-centered parameterization for M3 |
-
----
-
-## Local Development (Optional)
-
-```bash
-# Clone
-git clone https://github.com/armanfeili/FSL_2_Final_Project.git
-cd FSL_2_Final_Project
-
-# Run R scripts locally (requires R + JAGS installed)
-Rscript scripts/00_setup.R
-Rscript scripts/01_load_and_inspect_data.R
-# ... etc.
-```
-
-Edit locally → commit → push → next Colab run pulls latest code automatically.
 
 ---
 

@@ -47,7 +47,7 @@
 
 ### Step 0.1 — Create the R project directory structure
 
-- [ ] Create the following subdirectories inside the project root:
+- [x] Create the following subdirectories inside the project root:
 
 ```
 scripts/            # Numbered R scripts
@@ -64,9 +64,9 @@ report/             # Final PDF report, .Rmd or .tex source
 notes/              # Internal memos, decision logs
 ```
 
-- [ ] Save the three raw WHO CSVs unchanged in `data_raw/`. This is the single canonical raw-data directory — do not use `data/` or any other location for raw source files.
-- [ ] Write a `README.md` describing the folder layout and script order.
-- [ ] Create `notes/decision_log.md` for recording all frozen choices (year window, predictor set, baseline region, thresholds, reparameterization decisions, recovery-study reductions).
+- [x] Save the three raw WHO CSVs unchanged in `data_raw/`. This is the single canonical raw-data directory — do not use `data/` or any other location for raw source files.
+- [x] Write a `README.md` describing the folder layout and script order.
+- [x] Create `notes/decision_log.md` for recording all frozen choices (year window, predictor set, baseline region, thresholds, reparameterization decisions, recovery-study reductions).
 
 **Deliverables:** Clean directory tree; raw data in `data_raw/`; layout README; empty decision log.
 **Done-when:** The entire project can be run from the root with no manual file moving.
@@ -75,7 +75,7 @@ notes/              # Internal memos, decision logs
 
 ### Step 0.2 — Define the numbered script pipeline
 
-- [ ] Create an ordered script execution plan:
+- [x] Create an ordered script execution plan:
 
 | # | Script | Purpose | Inputs | Outputs |
 |---|--------|---------|--------|---------|
@@ -97,31 +97,34 @@ notes/              # Internal memos, decision logs
 | 15 | `15_make_tables_and_figures.R` | Polish all outputs for report | All outputs | Report-ready assets |
 | 16 | `16_write_report_support_outputs.R` | Export final numbers for abstract/appendix | All outputs | Summary file |
 
-- [ ] Document input/output for each script.
+- [x] Document input/output for each script.
 
-> **Rule:** Downstream scripts must read frozen exported objects (locked table, posterior draw `.rds` files, exported tables) rather than silently rebuilding them. No script should regenerate an upstream output internally.
+> **Rule:** Downstream sections read frozen exported objects (locked table, posterior draw `.rds` files, exported tables) rather than silently rebuilding them. No section should regenerate an upstream output internally.
 
-**Deliverables:** Script pipeline document.
+> **Implementation note:** The notebook (`notebooks/main.ipynb`) is the sole execution source of truth. The numbered script names above describe *logical stages*, each mapped to a notebook section (A–J). No separate `.R` scripts drive execution.
+
+**Deliverables:** Pipeline mapping table in notebook Section A.
 **Done-when:** Another person can understand the execution order.
 
 ---
 
 ### Step 0.3 — Freeze software stack and reproducibility settings
 
-- [ ] Decide final R + JAGS software stack:
+- [x] Decide final R + JAGS software stack:
   - R (record version)
   - JAGS (record version)
   - R packages: `rjags`, `coda`, `ggplot2`, `dplyr`, `tidyr`, `readr`, `stringr`, `forcats`, `bayesplot`, `lme4`, `VGAM`, `aod`
-- [ ] Record exact package versions in a version manifest.
-- [ ] Set a global random seed convention (e.g., `set.seed(2026)`).
-- [ ] Implement `scripts/00_setup.R`:
-  - [ ] Load all packages
-  - [ ] Set seed
-  - [ ] Define common paths (`DATA_RAW`, `DATA_PROC`, `OUT_FIG`, `OUT_TAB`, etc.)
-  - [ ] Define helper functions (safe directory creation, table saving, figure saving, runtime logging)
-  - [ ] Define a common `ggplot2` theme
+- [x] Record exact package versions in a version manifest.
+- [x] Set a global random seed convention (e.g., `set.seed(2026)`).
+- [x] Implement setup in notebook Section A (cells A0–A7) instead of `scripts/00_setup.R`:
+  - [x] Load all packages (including `bayesplot` and `aod`)
+  - [x] Set seed
+  - [x] Define common paths (`DATA_RAW`, `DATA_PROC`, `OUT_FIG`, `OUT_TAB`, etc.)
+  - [x] Define helper functions (safe directory creation, table saving, figure saving, runtime logging)
+  - [x] Define a common `ggplot2` theme
+  - [x] Log Git commit SHA for reproducibility
 
-**Deliverables:** `00_setup.R`; version manifest for appendix.
+**Deliverables:** Notebook Section A (cells A0–A7); `version_manifest.csv`; `git_metadata.yaml`.
 **Done-when:** Same code produces same outputs on rerun.
 
 ---

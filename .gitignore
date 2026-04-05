@@ -15,6 +15,8 @@ __pycache__/
 # Cloud-stored runtime data (lives in Google Drive)
 data/
 !data/README.md
+data_raw/
+data_processed/
 runs/
 outputs/
 checkpoints/
