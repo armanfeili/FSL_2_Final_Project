@@ -1,6 +1,6 @@
 # ML Colab Agentic Template
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/armanfeili/ml-colab-agentic/blob/main/notebooks/01_train.ipynb)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/armanfeili/FSL_2_Final_Project/blob/main/notebooks/main.ipynb)
 
 **This is a minimal template to combine the power of GitHub Copilot in VS Code with GPU training in Google Colab.**
 
