@@ -10,7 +10,7 @@ Also inspect the datasets in:
 
 Then execute this scope:
 
-X = Phase 1
+X = Phase 0
 
 <<X>>
 
@@ -41,7 +41,7 @@ Rules:
 - Avoid unnecessary abstractions, metaprogramming, heavy indirection, and premature optimization.
 
 4. Project consistency
-- Respect frozen rules in `docs/FINAL_TODO_PLAN.md` and `notes/decision_log.md` if it exists.
+- Respect frozen rules in `docs/TODO_PLAN.md` and `notes/decision_log.md` if it exists.
 - Reuse existing files where possible.
 - Do not silently rebuild upstream outputs inside downstream work.
 - For main-model work, preserve:
@@ -57,7 +57,7 @@ Rules:
 - Inspect the repository first and understand what already exists.
 - Prefer modifying existing files over creating new ones.
 - Create or update only the outputs, docs, metadata, and logs required by this phase.
-- Update the relevant checklist items in `docs/FINAL_TODO_PLAN.md`.
+- Update the relevant checklist items in `docs/TODO_PLAN.md`.
 - Update `notes/decision_log.md` if this phase freezes or changes any recorded decision.
 - Mark `[x]` only for truly completed items, `[/]` for partial items, and leave unrelated items unchanged.
 
@@ -87,7 +87,7 @@ D. Checks performed
 - short bullet list
 
 E. Checklist updates
-- which items in `docs/FINAL_TODO_PLAN.md` were changed to `[x]`, `[/]`, or left `[ ]`
+- which items in `docs/TODO_PLAN.md` were changed to `[x]`, `[/]`, or left `[ ]`
 
 F. Result
 - what is completed for this phase
