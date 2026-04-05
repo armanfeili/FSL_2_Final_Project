@@ -1,6 +1,6 @@
 Before doing anything else, read these files as completely as possible:
 
-1. `docs/FINAL_TODO_PLAN.md`
+1. `docs/TODO_PLAN.md`
 2. `docs/PROJECT_PLAN.md`
 3. `docs/QUICK_START.md`
 4. `README.md`
@@ -14,7 +14,7 @@ X = Phase 1
 
 <<X>>
 
-Interpret `<<X>>` as a whole phase from `docs/FINAL_TODO_PLAN.md`, not a single step. Complete that phase as fully as possible, including its steps, substeps, deliverables, and done-when conditions, as far as they are actually achievable from the current repository state.
+Interpret `<<X>>` as a whole phase from `docs/TODO_PLAN.md`, not a single step. Complete that phase as fully as possible, including its steps, substeps, deliverables, and done-when conditions, as far as they are actually achievable from the current repository state.
 
 Rules:
 
