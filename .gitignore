@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.ENV/
+.env
+.env.*
+
+# Jupyter/Colab
+.ipynb_checkpoints/
+*.checkpoint.ipynb
+**/.ipynb_checkpoints
+
+# Cloud-stored runtime data (lives in Google Drive)
+data/
+!data/README.md
+runs/
+outputs/
+checkpoints/
+
+# Model & array blobs
+*.pt
+*.pth
+*.ckpt
+*.npz
+*.npy
+
+# OS / env noise
+.DS_Store
+Thumbs.db
+.cache/
