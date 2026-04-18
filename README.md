@@ -1,7 +1,5 @@
 # Bayesian Modeling of Cross-Country TB Treatment Success
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/armanfeili/FSL_2_Final_Project/blob/main/notebooks/main.ipynb)
-
 **A Fully Bayesian MCMC Analysis of WHO Data, 2012–2023**
 
 > **Course:** Fundamentals of Statistical Learning II — M.Sc. in Data Science, a.y. 2025–2026
@@ -20,18 +18,28 @@ The analysis compares three models of increasing complexity, fitted via MCMC (JA
 
 ## Execution Model
 
-> **`notebooks/main.ipynb` is the sole execution source of truth.**
+> **`src/main.R` is the sole execution source of truth.**
 
-All analysis code lives in a single R-kernel Jupyter notebook. The TODO plan references numbered script stages (00–16); these are *logical stages*, not runnable `.R` files. Each stage maps to a notebook section (A–J). The `scripts/` directory is reserved for optional helper utilities only.
+All analysis code lives in a single R script. The TODO plan references numbered script stages (00–16); these are *logical stages*, each corresponding to a section in the main script (A–J). The `src/scripts/` directory is reserved for optional helper utilities only.
 
-The notebook runs identically on **Google Colab** (primary) and **locally** (requires R + JAGS). Two root variables govern all paths:
+The script runs identically on **Google Colab** (with R kernel) and **locally** (requires R + JAGS). A `PROJECT_ROOT` variable governs all paths, pointing to the repository root.
+
+**How to run:**
+```bash
+# From project root
+Rscript src/main.R
+
+# Or, source in an R session
+source("src/main.R")
+```
+
+> **Note:** If needed, an HTML report can later be generated from `src/main.R` using `knitr::spin()` or `rmarkdown`, but the R script remains the single source of truth for execution.
 
 | Variable | Colab | Local |
 |----------|-------|-------|
-| `CODE_ROOT` | `/content/FSL_2_Final_Project` (cloned from GitHub) | Project directory on disk |
-| `STORAGE_ROOT` | Google Drive (`MyDrive/Projects/FSL_2_Final_Project/`) | Same as `CODE_ROOT` |
+| `PROJECT_ROOT` | `/content/FSL_2_Final_Project` (cloned from GitHub) | Repository root on disk |
 
-All downstream paths (`DATA_RAW`, `OUT_FIG`, etc.) derive from these two roots.
+All downstream paths (`DATA_RAW`, `DATA_PROCESSED`, `FIGURES_DIR`, etc.) derive from `PROJECT_ROOT`.
 
 ---
 
@@ -39,64 +47,71 @@ All downstream paths (`DATA_RAW`, `OUT_FIG`, etc.) derive from these two roots.
 
 ```
 FSL_2_Final_Project/
-├── notebooks/
-│   └── main.ipynb               # Sole execution entry point (R kernel)
-├── data_raw/                    # Original WHO CSVs — single canonical raw-data dir (gitignored)
-├── data_processed/              # Locked main-analysis table (gitignored)
-├── outputs/
-│   ├── figures/                 # All plots (EDA, diagnostics, PPC, recovery)
-│   ├── tables/                  # All CSV/LaTeX tables, version_manifest.csv, git_metadata.yaml
-│   ├── model_objects/           # Saved MCMC posterior draws (.rds)
-│   ├── diagnostics/             # Convergence output files
-│   └── simulations/             # Parameter recovery datasets & results
-├── models/                      # JAGS model files (.jags)
-├── runs/                        # Per-run timestamped MCMC output folders (gitignored)
-├── report/                      # Final PDF report, .Rmd or .tex source
-├── scripts/                     # Optional helper utilities (not the execution path)
-├── notes/
-│   └── decision_log.md          # Frozen choices (year window, predictors, baseline, etc.)
+├── data/
+│   ├── data_raw/                # Original WHO CSVs — single canonical raw-data dir
+│   └── data_processed/          # Locked main-analysis table
+├── src/
+│   ├── main.R                   # Sole execution entry point (R script)
+│   ├── models/                  # JAGS model files (.jags)
+│   ├── scripts/                 # Optional helper utilities (not the execution path)
+│   ├── tests/
+│   │   └── test_smoke.py        # Smoke tests for project structure
+│   ├── report/                  # Final PDF report, .Rmd or .tex source
+│   └── outputs/
+│       ├── figures/             # All plots (EDA, diagnostics, PPC, recovery)
+│       ├── tables/              # All CSV/LaTeX tables, version_manifest.csv, git_metadata.yaml
+│       ├── model_objects/       # Saved MCMC posterior draws (.rds)
+│       ├── diagnostics/         # Convergence output files
+│       └── simulations/         # Parameter recovery datasets & results
 ├── docs/
 │   ├── PROJECT_PLAN.md          # Full project plan & methodology
 │   ├── TODO_PLAN.md             # Step-by-step execution checklist
 │   └── QUICK_START.md           # Detailed setup guide
-├── tests/                       # Validation scripts
-├── requirements.txt             # R package list
+├── notes/
+│   └── decision_log.md          # All frozen choices (year window, predictors, etc.)
 ├── .gitignore
 ├── LICENSE
 └── README.md                    # This file
 ```
 
-**Not in repo (gitignored):** `data_raw/`, `data_processed/`, `outputs/`, `runs/`.
+**Note:** Data files may be gitignored. Place raw WHO CSV files in `data/data_raw/`.
 
 ---
 
 ## How to Run
 
-### On Google Colab (primary)
+### On Google Colab
 
-1. Click the Colab badge above or open: `https://colab.research.google.com/github/armanfeili/FSL_2_Final_Project/blob/main/notebooks/main.ipynb`
-2. Mount Google Drive (sidebar folder icon, or run cell A0)
-3. **Runtime → Run all**
+1. Upload `src/main.R` to Colab or use the GitHub repo URL
+2. Set runtime to R (if using a notebook interface)
+3. Run the script
 
-The notebook will clone the repo, install JAGS + R packages, and write all outputs to Drive.
+The script will clone the repo, install JAGS + R packages, and write all outputs to the appropriate directories.
 
-### Locally
+### Locally (Recommended)
 
 ```bash
 git clone https://github.com/armanfeili/FSL_2_Final_Project.git
 cd FSL_2_Final_Project
+
+# Run the main analysis script
+Rscript src/main.R
 ```
 
-Requirements: R (≥ 4.x), JAGS (≥ 4.x), and the packages listed below. Then open `notebooks/main.ipynb` in VS Code, JupyterLab, or RStudio and run all cells. Outputs are written under the project root.
+Requirements: R (≥ 4.x), JAGS (≥ 4.x), and the packages listed below. Outputs are written under `src/outputs/`.
+
+**Alternative methods:**
+- In RStudio: Open `src/main.R` and run Source
+- In R console: `source("src/main.R")`
 
 ---
 
 ## Analysis Pipeline
 
-> Each row is a *logical stage*, executed as a notebook section — not a separate `.R` script.
+> Each row is a *logical stage*, executed as a script section — not a separate `.R` script.
 
-| # | Stage | Notebook Section | Purpose |
-|---|-------|------------------|---------|
+| # | Stage | Script Section | Purpose |
+|---|-------|----------------|---------|
 | 00 | Setup | **A** | Load packages, seed, paths, helpers |
 | 01 | Load & inspect data | **B0** | Import raw CSVs, audit dimensions & keys |
 | 02 | Build main analysis table | **B1–B2** | Merge, filter, standardize, lock dataset |
@@ -141,11 +156,11 @@ All models use:
 
 | File | Location | Role |
 |------|----------|------|
-| `TB_outcomes_2026-04-04.csv` | `data_raw/` | Treatment outcomes (response variable) |
-| `TB_burden_countries_2026-04-04.csv` | `data_raw/` | Epidemiological burden (predictors) |
-| `TB_data_dictionary_2026-04-04.csv` | `data_raw/` | Variable definitions and metadata |
+| `TB_outcomes_2026-04-04.csv` | `data/data_raw/` | Treatment outcomes (response variable) |
+| `TB_burden_countries_2026-04-04.csv` | `data/data_raw/` | Epidemiological burden (predictors) |
+| `TB_data_dictionary_2026-04-04.csv` | `data/data_raw/` | Variable definitions and metadata |
 
-**Unit of analysis:** One row = one country-year. All models are fitted on the **same locked main-analysis table** (`data_processed/main_analysis_table_locked.csv`).
+**Unit of analysis:** One row = one country-year. All models are fitted on the **same locked main-analysis table** (`data/data_processed/main_analysis_table_locked.csv`).
 
 ---
 
@@ -165,13 +180,13 @@ System dependency: **JAGS** (installed automatically in Colab via `apt-get`).
 
 ## Reproducibility Outputs
 
-The notebook's Section A automatically saves:
+Section A of `src/main.R` automatically saves:
 
 | File | Location | Contents |
 |------|----------|----------|
-| `version_manifest.csv` | `outputs/tables/` | R version, JAGS version, all package versions |
-| `git_metadata.yaml` | `outputs/tables/` | Repo URL, branch, commit SHA, timestamp |
-| `setup_metadata.yaml` | `outputs/tables/` | Seed, CODE_ROOT, STORAGE_ROOT, all canonical paths |
+| `version_manifest.csv` | `src/outputs/tables/` | R version, JAGS version, all package versions |
+| `git_metadata.yaml` | `src/outputs/tables/` | Repo URL, branch, commit SHA, timestamp |
+| `setup_metadata.yaml` | `src/outputs/tables/` | Seed, PROJECT_ROOT, all canonical paths |
 
 These files pin the exact environment for every run.
 
@@ -198,7 +213,8 @@ These files pin the exact environment for every run.
 
 | Issue | Solution |
 |-------|----------|
-| Notebook opens with Python runtime | Kernel is set to `ir` (R) — Colab should auto-detect. If not: Runtime → Change runtime type → R |
+| Missing R packages | Run: `install.packages(c("rjags", "coda", "MCMCvis", "tidyverse", ...))` |
+| JAGS not found | Install JAGS from https://mcmc-jags.sourceforge.io/ or via Homebrew (`brew install jags`) |
 | Drive mount fails | Click folder icon in sidebar → Mount Drive. Re-authorize if prompted |
 | JAGS not found | Re-run cell A3 (installs JAGS via `apt-get`) |
 | Package install fails | Check internet; re-run cell A3 |
@@ -212,7 +228,7 @@ These files pin the exact environment for every run.
 - [docs/QUICK_START.md](docs/QUICK_START.md) — Detailed setup and walkthrough
 - [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md) — Full project plan & methodology
 - [docs/TODO_PLAN.md](docs/TODO_PLAN.md) — Step-by-step execution checklist
-- [notebooks/main.ipynb](notebooks/main.ipynb) — Main Colab notebook (R kernel)
+- [src/main.ipynb](src/main.ipynb) — Main Colab notebook (R kernel)
 
 ---
 

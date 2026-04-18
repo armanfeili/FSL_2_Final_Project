@@ -1,41 +1,58 @@
 # Quick Start Guide
 
-**Run the Bayesian TB Treatment Success analysis on Colab in R.**
+**Run the Bayesian TB Treatment Success analysis locally or on Colab in R.**
 
-This guide walks you through running the full analysis pipeline using the R-kernel Colab notebook with data and outputs stored on Google Drive.
+This guide walks you through running the full analysis pipeline using `src/main.R`.
 
 ---
 
 ## Prerequisites
 
-- Google account (for Colab and Drive)
-- WHO TB data files in Drive (or in the repo's `data/data_raw/`)
-- **No local R/JAGS installation required** — everything runs in Colab
+**For local execution (recommended):**
+- R (≥ 4.x)
+- JAGS (≥ 4.x) — install from https://mcmc-jags.sourceforge.io/ or via Homebrew (`brew install jags`)
+- WHO TB data files in `data/data_raw/`
+
+**For Colab execution:**
+- Google account (for Colab and optional Drive integration)
+- WHO TB data files in `data/data_raw/`
 
 ---
 
 ## Step-by-Step
 
-### 1. Open the Notebook in Colab
+### 1. Run Locally (Recommended)
 
-**Option A:** Click the badge in [README.md](../README.md)
+```bash
+# Clone the repository
+git clone https://github.com/armanfeili/FSL_2_Final_Project.git
+cd FSL_2_Final_Project
 
-**Option B:** Direct link:
+# Run the main analysis script
+Rscript src/main.R
 ```
-https://colab.research.google.com/github/armanfeili/FSL_2_Final_Project/blob/main/notebooks/main.ipynb
-```
 
-> The notebook uses an **R kernel** (`ir`). Colab will automatically start the R runtime — you do NOT need to change the runtime type manually.
+**Alternative methods:**
+- In RStudio: Open `src/main.R` and click "Source"
+- In R console: `source("src/main.R")`
 
-### 2. Mount Google Drive
+### 2. Run on Google Colab (Optional)
 
-Mount your Drive so outputs persist across sessions:
+1. Upload `src/main.R` to Colab or use the GitHub repo
+2. Set up R runtime
+3. Run the script
+
+> The script auto-detects whether it's running on Colab and will install JAGS and R packages automatically.
+
+### 2. Mount Google Drive (Optional, Colab only)
+
+Mount your Drive if you want outputs to persist across sessions:
 
 1. Click the **folder icon** (📁) in the Colab left sidebar
 2. Click **Mount Drive**
 3. Authorize if prompted
 
-Or simply run cell **A0** — it will check whether Drive is already mounted.
+Or simply run section **A0** of the script — it will check whether Drive is already mounted.
 
 ### 3. Verify R Runtime
 
@@ -46,17 +63,17 @@ R.version.string
 # [1] "R version 4.x.x ..."
 ```
 
-### 4. Run All Cells
+### 4. Run the Script
 
-Click **Runtime** → **Run all** or run cells sequentially:
+The script runs sequentially through all sections:
 
-#### **Section A — Setup (Drive + Repo + R Packages)**
+#### **Section A — Setup (Environment + R Packages)**
 
-| Cell | Description | Duration |
-|------|-------------|----------|
-| A0 | Mount Google Drive | ~5 sec (requires sidebar click) |
-| A1 | Set up Drive directory paths | <1 sec |
-| A2 | Clone/pull repo from GitHub | ~10 sec |
+| Section | Description | Duration |
+|---------|-------------|----------|
+| A0 | Detect environment (Colab/local) | <1 sec |
+| A1 | Set up directory paths | <1 sec |
+| A2 | Clone/pull repo from GitHub (Colab only) | ~10 sec |
 | A3 | Install R packages + JAGS system library | ~2-5 min (first time) |
 | A4 | Load all R libraries | ~5 sec |
 | A5 | Set random seed + ggplot2 theme | <1 sec |
@@ -70,8 +87,8 @@ Click **Runtime** → **Run all** or run cells sequentially:
 
 #### **Section B — Data Loading & Cleaning**
 
-| Cell | Description | Duration |
-|------|-------------|----------|
+| Section | Description | Duration |
+|---------|-------------|----------|
 | B0 | Load raw WHO CSV files | ~5 sec |
 | B1 | Run data cleaning pipeline | ~10 sec |
 | B2 | Build sample attrition table | <1 sec |
@@ -85,8 +102,8 @@ Click **Runtime** → **Run all** or run cells sequentially:
 
 #### **Section C — Exploratory Data Analysis**
 
-| Cell | Description |
-|------|-------------|
+| Section | Description |
+|---------|-------------|
 | C0 | Descriptive summaries, distributions, temporal trends, bivariate plots |
 
 **What you'll see:**
@@ -170,23 +187,35 @@ mcmc_cfg <- list(
 
 ## Understanding the Output
 
-### Folder Structure in Drive
+### Project Folder Structure
 
-After running, check `MyDrive/Projects/FSL_2_Final_Project/`:
+After running, your project will have this structure:
 
 ```
 FSL_2_Final_Project/
 ├── data/
-│   ├── data_raw/                       # WHO CSV files
-│   └── data_processed/                 # Locked analysis table
-├── runs/
-│   └── 2026-04-05_14-30_bayesian_tb/   # Timestamped run
-│       ├── mcmc_config.yaml            # Frozen MCMC settings
-│       ├── mcmc_output/                # Posterior draws (.rds)
-│       ├── plots/                      # Diagnostic & PPC figures
-│       ├── diagnostics/                # Convergence results
-│       └── tables/                     # Summary tables
-└── output/                             # Final polished outputs
+│   ├── data_raw/                       # WHO CSV files (input)
+│   └── data_processed/                 # Locked analysis table (generated)
+├── src/
+│   ├── main.R                          # Main analysis script (source of truth)
+│   ├── models/                         # JAGS model files (.jags)
+│   ├── scripts/                        # Optional helper scripts
+│   ├── report/                         # Final report exports
+│   ├── tests/                          # Smoke tests
+│   └── outputs/
+│       ├── figures/                    # All plots (EDA, diagnostics, PPC)
+│       ├── tables/                     # CSV/LaTeX tables, manifests
+│       ├── diagnostics/                # Convergence output files
+│       ├── model_objects/              # Saved MCMC posterior draws (.rds)
+│       ├── simulations/                # Parameter recovery results
+│       └── runs/                       # Timestamped run folders
+│           └── 2026-04-05_14-30_bayesian_tb/
+│               ├── mcmc_config.yaml
+│               ├── mcmc_output/
+│               ├── plots/
+│               ├── diagnostics/
+│               └── tables/
+└── docs/                               # Documentation
 ```
 
 ### Key Output Files
@@ -194,9 +223,9 @@ FSL_2_Final_Project/
 | File | Description |
 |------|-------------|
 | `mcmc_config.yaml` | Frozen MCMC settings for this run |
-| `mcmc_output/model1_samples.rds` | Model 1 posterior draws |
-| `mcmc_output/model2_samples.rds` | Model 2 posterior draws |
-| `mcmc_output/model3_samples.rds` | Model 3 posterior draws |
+| `model_objects/model1_samples.rds` | Model 1 posterior draws |
+| `model_objects/model2_samples.rds` | Model 2 posterior draws |
+| `model_objects/model3_samples.rds` | Model 3 posterior draws |
 | `tables/posterior_summaries.csv` | Parameter estimates and intervals |
 | `tables/dic_comparison.csv` | DIC values for all three models |
 | `plots/trace_*.png` | MCMC trace plots |
@@ -249,16 +278,27 @@ phi ~ dgamma(1, 0.1)  # instead of dgamma(2, 0.1)
 
 ## Troubleshooting
 
-### Notebook Opens in Python Mode
+### JAGS Not Found (Local)
 
-**Symptom:** Cells show Python syntax errors
+**Error:**
+```
+Error in jags.model(...) : could not find JAGS
+```
 
-**Fix:**
-The notebook kernel is set to `ir` (R). If Colab doesn't auto-detect:
-1. Runtime → Change runtime type → **R** → Save
-2. Re-run all cells
+**Fix (macOS):**
+```bash
+brew install jags
+```
 
-### JAGS Installation Fails
+**Fix (Ubuntu/Debian):**
+```bash
+sudo apt-get update && sudo apt-get install -y jags
+```
+
+**Fix (Windows):**
+Download and install from https://mcmc-jags.sourceforge.io/
+
+### JAGS Installation Fails (Colab)
 
 **Error:**
 ```
@@ -338,7 +378,10 @@ Error: cannot allocate vector of size X.X Gb
 1. **Read the full [PROJECT_PLAN.md](PROJECT_PLAN.md)** for detailed methodology
 2. **Follow the [TODO_PLAN.md](TODO_PLAN.md)** checklist for execution
 3. **Upload WHO data files** to `data/data_raw/` (in Drive or the repo)
-4. **Run the notebook** end-to-end
+4. **Run the script** end-to-end:
+   ```bash
+   Rscript src/main.R
+   ```
 5. **Write the final report** using outputs from Drive
 
 ---
