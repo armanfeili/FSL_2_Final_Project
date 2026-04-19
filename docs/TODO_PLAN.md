@@ -563,6 +563,7 @@ The following safeguards must be maintained throughout the project:
 # PHASE 8 — Full MCMC Fitting & Diagnostics
 
 > **Goal:** Fit all primary models and verify chain quality.
+> **Execution status (2026-04-19):** `[/]` — M1 diagnostics acceptable after extension; M2 diagnostics acceptable after extended-fast rerun and promotion; M3 centered fit remains unacceptable and non-centered remediation is running.
 
 ### Step 8.1 — Set final MCMC settings
 
@@ -575,38 +576,38 @@ The following safeguards must be maintained throughout the project:
 
 ### Step 8.2 — Fit all three models on locked dataset
 
-- [x] For each model: run pilot → inspect quick diagnostics → run final chains.
-- [x] Save: posterior draws, monitored parameters, runtime, timestamp, seed, model file used.
-- [x] Log runtime and timestamp for each model fit.
+- [/] For each model: run pilot → inspect quick diagnostics → run final chains.
+- [/] Save: posterior draws, monitored parameters, runtime, timestamp, seed, model file used.
+- [/] Log runtime and timestamp for each model fit.
 
 ### Step 8.3 — Save posterior draws in standardized format
 
-- [x] Export posterior samples as `.rds` files in `src/outputs/model_objects/` with common naming/structure.
+- [/] Export posterior samples as `.rds` files in `src/outputs/model_objects/` with common naming/structure.
 
 ### Step 8.4 — Produce visual MCMC diagnostics (for each model)
 
-- [x] Trace plots for key parameters: `beta_0`, `beta_1`–`beta_4`, region effects (`gamma_r`, with baseline `gamma_1 = 0`), `phi`, `sigma_u`, selected `u_i`.
-- [x] Posterior density plots.
-- [x] Autocorrelation plots.
-- [x] Multi-chain overlaid trace plots.
+- [/] Trace plots for key parameters: `beta_0`, `beta_1`–`beta_4`, region effects (`gamma_r`, with baseline `gamma_1 = 0`), `phi`, `sigma_u`, selected `u_i`.
+- [/] Posterior density plots.
+- [/] Autocorrelation plots.
+- [ ] Multi-chain overlaid trace plots.
 
 ### Step 8.5 — Compute numerical diagnostics
 
-- [x] R-hat (target < 1.01, acceptable < 1.05).
-- [x] Effective sample size (target > 400 per key parameter).
-- [x] Monte Carlo standard error.
-- [x] Flag any problematic parameters.
+- [/] R-hat (target < 1.01, acceptable < 1.05).
+- [/] Effective sample size (target > 400 per key parameter).
+- [/] Monte Carlo standard error.
+- [/] Flag any problematic parameters.
 
 ### Step 8.6 — Run formal convergence tests
 
-- [x] Gelman-Rubin (multi-chain convergence).
-- [x] Geweke (early vs late chain comparison).
-- [x] Heidelberger-Welch (stationarity + half-width).
-- [x] Raftery-Lewis (required run length estimation) — if feasible.
+- [ ] Gelman-Rubin (multi-chain convergence).
+- [ ] Geweke (early vs late chain comparison).
+- [ ] Heidelberger-Welch (stationarity + half-width).
+- [ ] Raftery-Lewis (required run length estimation) — if feasible.
 
 ### Step 8.7 — Resolve mixing problems (if any)
 
-- [x] If diagnostics poor: extend chains, re-check scaling, try non-centered parameterization for M3, document changes.
+- [/] If diagnostics poor: extend chains, re-check scaling, try non-centered parameterization for M3, document changes.
 
 **Deliverables:** Posterior draw files; diagnostics figures; diagnostics summary table; formal convergence test results.
 **Done-when:** All final posteriors come from chains with acceptable diagnostics.
@@ -616,6 +617,7 @@ The following safeguards must be maintained throughout the project:
 # PHASE 9 — Posterior Inference
 
 > **Goal:** Extract and interpret substantive results.
+> **Execution status (2026-04-19):** `[ ]` — blocked until M3 reaches acceptable diagnostics (R-hat <= 1.05 and ESS >= 400 for key parameters).
 
 ### Step 9.1 — Compute posterior summaries (for each model)
 
@@ -651,6 +653,7 @@ The following safeguards must be maintained throughout the project:
 # PHASE 10 — Posterior Predictive Checks
 
 > **Goal:** Assess whether the estimated models can recover key features of the observed data. This phase directly addresses the course guideline: "discussion on the ability of the estimated model to recover some features of the observed data."
+> **Execution status (2026-04-19):** `[ ]` — blocked until M3 reaches acceptable diagnostics; M1 and M2 predictive artifacts exist.
 
 ### Step 10.1 — Generate replicated datasets (for each model)
 
@@ -695,6 +698,7 @@ The following safeguards must be maintained throughout the project:
 # PHASE 11 — Parameter Recovery Simulation
 
 > **Goal:** Verify that the Bayesian procedure can reliably recover true parameter values under the assumed data-generating mechanism. This phase directly addresses the course guideline: "check the ability of a fully Bayesian analysis to recover model parameters with data simulated from the model."
+> **Execution status (2026-04-18):** `[ ]` — blocked until final model fit settings are frozen after Phase 8.
 
 ### Step 11.1 — Design the recovery simulation
 
@@ -734,6 +738,7 @@ The following safeguards must be maintained throughout the project:
 # PHASE 12 — DIC Model Comparison
 
 > **Goal:** Quantitative model ranking on the same dataset.
+> **Execution status (2026-04-19):** `[/]` — code ready; execution blocked by unresolved M3 convergence.
 
 > ⚠️ **Critical warning:** Do NOT use JAGS's default DIC for M2 or M3 as the primary comparison metric. The latent `theta_it` representation makes the default deviance conditional on latent variables rather than the observed-data beta-binomial likelihood. **Primary DIC must be based on observed-data log-likelihood computed in post-processing.**
 
@@ -767,7 +772,7 @@ The following safeguards must be maintained throughout the project:
 
 **Deliverables:** DIC comparison table; interpretation note.
 **Done-when:** Primary model recommendation is quantitatively supported.
-**Status:** ✅ Code implemented. BLOCKED pending posterior files from Phase 8.
+**Status:** `[/]` Code implemented and partially unblocked (M1 available). Final DIC table remains blocked pending M2/M3 posterior files from Phase 8.
 
 ---
 
@@ -803,7 +808,7 @@ The following safeguards must be maintained throughout the project:
 
 **Deliverables:** Frequentist model objects; comparison table.
 **Done-when:** Section is concise but methodologically clean.
-**Status:** ✅ Code implemented. Bayesian comparison will be populated when Phase 8 posteriors are available.
+**Status:** `[/]` Frequentist side implemented. Bayesian-vs-frequentist side-by-side comparison still pending full Bayesian outputs from Phase 8.
 
 ---
 

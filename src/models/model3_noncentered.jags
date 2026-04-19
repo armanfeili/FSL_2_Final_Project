@@ -51,7 +51,7 @@ model {
   # Priors for fixed effects
   beta0 ~ dnorm(0, 0.16)  # precision = 1/(2.5^2) = 0.16
   
-  for (j in 1:p) {
+  for (j in 1:n_pred) {
     beta[j] ~ dnorm(0, 0.16)
   }
   

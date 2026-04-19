@@ -372,6 +372,24 @@
 
 **Note:** Actual MCMC fitting requires JAGS to be installed. Code handles JAGS unavailability gracefully and reports BLOCKED status if JAGS is not detected.
 
+### 2026-04-19 — Phase 8 Remediation Update (Convergence + Robust Saving)
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Phase 8 save-order hardening | Save parameter posteriors before optional `Y_rep`/`u` sampling in `src/main.R` | Prevents losing valid parameter chains when expensive predictive sampling fails or is interrupted |
+| M1 low-ESS remediation | Extended run used (`4` chains, burn-in `4000`, iter `4000`) | Original M1 had low ESS for key parameters; extended run achieved ESS >= 400 and R-hat <= 1.05 for key parameters |
+| M1 extended Y_rep handling | `Y_rep` intentionally interrupted after parameter save | Prioritized chain diagnostics and parameter preservation; status logged in `m1_extended_yrep_status.txt` |
+| M2 low-ESS remediation | Extended-fast run used (`2` chains, burn-in `4000`, iter `4000`, no `Y_rep`) | Faster recovery path while preserving reduced-run `Y_rep`; achieved ESS >= 400 and R-hat <= 1.05 for key parameters |
+| M2 artifact promotion rule | Promote to standard files only if extended run improves or matches R-hat and passes thresholds | Keeps canonical artifacts aligned with best available converged fit |
+| M3 centered fit disposition | Centered M3 retained as failed baseline for diagnostics comparison | Centered run showed severe mixing issues (key min ESS ~12.5, max R-hat ~1.157) |
+| M3 remediation strategy | Switch to non-centered model (`model3_noncentered.jags`) with extended settings | Non-centered parameterization is the planned fallback for poor centered mixing |
+
+**2026-04-19 status snapshot:**
+- M1: diagnostics acceptable after extension (promoted).
+- M2: diagnostics acceptable after extended-fast rerun (promoted).
+- M3: centered run unacceptable; non-centered remediation running.
+- Phases 9/10/12 remain blocked until M3 diagnostics are acceptable.
+
 ### 2026-04-18 — Posterior Inference (Phase 9)
 
 | Decision | Choice | Rationale |

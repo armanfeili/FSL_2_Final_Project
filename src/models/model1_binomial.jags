@@ -16,19 +16,19 @@ model {
   # Likelihood
   for (i in 1:N) {
     # Linear predictor on logit scale
-    logit(p[i]) <- beta0 + inprod(X[i,], beta[]) + gamma[region[i]]
+    logit(prob[i]) <- beta0 + inprod(X[i,], beta[]) + gamma[region[i]]
     
     # Binomial observation model
-    Y[i] ~ dbin(p[i], n[i])
+    Y[i] ~ dbin(prob[i], n[i])
     
     # For posterior predictive checks: replicated data
-    Y_rep[i] ~ dbin(p[i], n[i])
+    Y_rep[i] ~ dbin(prob[i], n[i])
   }
   
   # Priors for fixed effects
   beta0 ~ dnorm(0, 0.16)  # precision = 1/(2.5^2) = 0.16
   
-  for (j in 1:p) {
+  for (j in 1:n_pred) {
     beta[j] ~ dnorm(0, 0.16)
   }
   

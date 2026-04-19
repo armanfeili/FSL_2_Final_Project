@@ -3957,7 +3957,7 @@ jags_data_base <- list(
   Y = Y,
   n = n_cohort,
   X = X,
-  p = p,
+  n_pred = p,
   region = region_idx,
   R = R
 )
@@ -3970,7 +3970,7 @@ jags_data_hier <- c(jags_data_base, list(
 
 cat("\n")
 cat("JAGS data list (base) created with elements:\n")
-cat(sprintf("  N = %d, p = %d, R = %d\n", jags_data_base$N, jags_data_base$p, jags_data_base$R))
+cat(sprintf("  N = %d, n_pred = %d, R = %d\n", jags_data_base$N, jags_data_base$n_pred, jags_data_base$R))
 cat("JAGS data list (hierarchical) created with additional:\n")
 cat(sprintf("  C = %d\n", jags_data_hier$C))
 
@@ -4577,6 +4577,10 @@ if (!jags_available) {
   FIT_M1_SUCCESS <- FALSE
   FIT_M2_SUCCESS <- FALSE
   FIT_M3_SUCCESS <- FALSE
+  FIT_M1_YREP_SUCCESS <- FALSE
+  FIT_M2_YREP_SUCCESS <- FALSE
+  FIT_M3_YREP_SUCCESS <- FALSE
+  FIT_M3_U_SUCCESS <- FALSE
   
   fit_times <- list()
   
@@ -4614,21 +4618,43 @@ if (!jags_available) {
       thin = mcmc_cfg$n_thin,
       progress.bar = "text"
     )
+
+    # Save parameter draws immediately so they are not lost if Y_rep fails.
+    saveRDS(samples_m1, file.path(MODEL_OBJ_DIR, "posterior_m1.rds"))
+    cat("  ✓ Saved parameter draws: posterior_m1.rds\n")
+    FIT_M1_SUCCESS <- TRUE
     
-    # Also sample Y_rep for PPC
+    # Sample Y_rep separately; keep parameter posterior even if this step fails.
     cat("  Sampling Y_rep for posterior predictive checks...\n")
-    samples_m1_yrep <- coda.samples(
-      jags_m1,
-      variable.names = c("Y_rep"),
-      n.iter = mcmc_cfg$n_iter,
-      thin = mcmc_cfg$n_thin,
-      progress.bar = "none"
-    )
+    tryCatch({
+      samples_m1_yrep <- coda.samples(
+        jags_m1,
+        variable.names = c("Y_rep"),
+        n.iter = mcmc_cfg$n_iter,
+        thin = mcmc_cfg$n_thin,
+        progress.bar = "none"
+      )
+      saveRDS(samples_m1_yrep, file.path(MODEL_OBJ_DIR, "posterior_m1_yrep.rds"))
+      FIT_M1_YREP_SUCCESS <- TRUE
+      cat("  ✓ Saved Y_rep draws: posterior_m1_yrep.rds\n")
+    }, error = function(e_yrep) {
+      FIT_M1_YREP_SUCCESS <<- FALSE
+      cat(sprintf("  ⚠️ M1 Y_rep sampling failed: %s\n", e_yrep$message))
+      writeLines(
+        c(
+          paste("timestamp:", as.character(Sys.time())),
+          "model: M1",
+          "stage: Y_rep sampling",
+          paste("error:", e_yrep$message),
+          "note: posterior_m1.rds was saved before this error"
+        ),
+        file.path(DIAG_DIR, "m1_yrep_status.txt")
+      )
+    })
     
     end_time_m1 <- Sys.time()
     fit_times$M1 <- difftime(end_time_m1, start_time_m1, units = "mins")
     
-    FIT_M1_SUCCESS <- TRUE
     cat(sprintf("  ✓ Model 1 fitted successfully in %.1f minutes\n", as.numeric(fit_times$M1)))
     
   }, error = function(e) {
@@ -4668,21 +4694,43 @@ if (!jags_available) {
       thin = mcmc_cfg$n_thin,
       progress.bar = "text"
     )
+
+    # Save parameter draws immediately so they are not lost if Y_rep fails.
+    saveRDS(samples_m2, file.path(MODEL_OBJ_DIR, "posterior_m2.rds"))
+    cat("  ✓ Saved parameter draws: posterior_m2.rds\n")
+    FIT_M2_SUCCESS <- TRUE
     
-    # Sample Y_rep for PPC
+    # Sample Y_rep separately; keep parameter posterior even if this step fails.
     cat("  Sampling Y_rep for posterior predictive checks...\n")
-    samples_m2_yrep <- coda.samples(
-      jags_m2,
-      variable.names = c("Y_rep"),
-      n.iter = mcmc_cfg$n_iter,
-      thin = mcmc_cfg$n_thin,
-      progress.bar = "none"
-    )
+    tryCatch({
+      samples_m2_yrep <- coda.samples(
+        jags_m2,
+        variable.names = c("Y_rep"),
+        n.iter = mcmc_cfg$n_iter,
+        thin = mcmc_cfg$n_thin,
+        progress.bar = "none"
+      )
+      saveRDS(samples_m2_yrep, file.path(MODEL_OBJ_DIR, "posterior_m2_yrep.rds"))
+      FIT_M2_YREP_SUCCESS <- TRUE
+      cat("  ✓ Saved Y_rep draws: posterior_m2_yrep.rds\n")
+    }, error = function(e_yrep) {
+      FIT_M2_YREP_SUCCESS <<- FALSE
+      cat(sprintf("  ⚠️ M2 Y_rep sampling failed: %s\n", e_yrep$message))
+      writeLines(
+        c(
+          paste("timestamp:", as.character(Sys.time())),
+          "model: M2",
+          "stage: Y_rep sampling",
+          paste("error:", e_yrep$message),
+          "note: posterior_m2.rds was saved before this error"
+        ),
+        file.path(DIAG_DIR, "m2_yrep_status.txt")
+      )
+    })
     
     end_time_m2 <- Sys.time()
     fit_times$M2 <- difftime(end_time_m2, start_time_m2, units = "mins")
     
-    FIT_M2_SUCCESS <- TRUE
     cat(sprintf("  ✓ Model 2 fitted successfully in %.1f minutes\n", as.numeric(fit_times$M2)))
     
   }, error = function(e) {
@@ -4722,30 +4770,71 @@ if (!jags_available) {
       thin = mcmc_cfg$n_thin,
       progress.bar = "text"
     )
+
+    # Save parameter draws immediately so they are not lost if downstream steps fail.
+    saveRDS(samples_m3, file.path(MODEL_OBJ_DIR, "posterior_m3.rds"))
+    cat("  ✓ Saved parameter draws: posterior_m3.rds\n")
+    FIT_M3_SUCCESS <- TRUE
     
-    # Sample country random effects and Y_rep for PPC
+    # Sample country random effects separately.
     cat("  Sampling random effects (u) for country rankings...\n")
-    samples_m3_u <- coda.samples(
-      jags_m3,
-      variable.names = c("u"),
-      n.iter = mcmc_cfg$n_iter,
-      thin = mcmc_cfg$n_thin,
-      progress.bar = "none"
-    )
-    
+    tryCatch({
+      samples_m3_u <- coda.samples(
+        jags_m3,
+        variable.names = c("u"),
+        n.iter = mcmc_cfg$n_iter,
+        thin = mcmc_cfg$n_thin,
+        progress.bar = "none"
+      )
+      saveRDS(samples_m3_u, file.path(MODEL_OBJ_DIR, "posterior_m3_u.rds"))
+      FIT_M3_U_SUCCESS <- TRUE
+      cat("  ✓ Saved random effects draws: posterior_m3_u.rds\n")
+    }, error = function(e_u) {
+      FIT_M3_U_SUCCESS <<- FALSE
+      cat(sprintf("  ⚠️ M3 u sampling failed: %s\n", e_u$message))
+      writeLines(
+        c(
+          paste("timestamp:", as.character(Sys.time())),
+          "model: M3",
+          "stage: u sampling",
+          paste("error:", e_u$message),
+          "note: posterior_m3.rds was saved before this error"
+        ),
+        file.path(DIAG_DIR, "m3_u_status.txt")
+      )
+    })
+
+    # Sample Y_rep separately; keep parameter posterior even if this step fails.
     cat("  Sampling Y_rep for posterior predictive checks...\n")
-    samples_m3_yrep <- coda.samples(
-      jags_m3,
-      variable.names = c("Y_rep"),
-      n.iter = mcmc_cfg$n_iter,
-      thin = mcmc_cfg$n_thin,
-      progress.bar = "none"
-    )
+    tryCatch({
+      samples_m3_yrep <- coda.samples(
+        jags_m3,
+        variable.names = c("Y_rep"),
+        n.iter = mcmc_cfg$n_iter,
+        thin = mcmc_cfg$n_thin,
+        progress.bar = "none"
+      )
+      saveRDS(samples_m3_yrep, file.path(MODEL_OBJ_DIR, "posterior_m3_yrep.rds"))
+      FIT_M3_YREP_SUCCESS <- TRUE
+      cat("  ✓ Saved Y_rep draws: posterior_m3_yrep.rds\n")
+    }, error = function(e_yrep) {
+      FIT_M3_YREP_SUCCESS <<- FALSE
+      cat(sprintf("  ⚠️ M3 Y_rep sampling failed: %s\n", e_yrep$message))
+      writeLines(
+        c(
+          paste("timestamp:", as.character(Sys.time())),
+          "model: M3",
+          "stage: Y_rep sampling",
+          paste("error:", e_yrep$message),
+          "note: posterior_m3.rds was saved before this error"
+        ),
+        file.path(DIAG_DIR, "m3_yrep_status.txt")
+      )
+    })
     
     end_time_m3 <- Sys.time()
     fit_times$M3 <- difftime(end_time_m3, start_time_m3, units = "mins")
     
-    FIT_M3_SUCCESS <- TRUE
     cat(sprintf("  ✓ Model 3 fitted successfully in %.1f minutes\n", as.numeric(fit_times$M3)))
     
   }, error = function(e) {
@@ -4767,23 +4856,50 @@ if (jags_available && (FIT_M1_SUCCESS || FIT_M2_SUCCESS || FIT_M3_SUCCESS)) {
   # Save Model 1 posteriors
   if (FIT_M1_SUCCESS) {
     saveRDS(samples_m1, file.path(MODEL_OBJ_DIR, "posterior_m1.rds"))
-    saveRDS(samples_m1_yrep, file.path(MODEL_OBJ_DIR, "posterior_m1_yrep.rds"))
-    cat("  ✓ Saved: posterior_m1.rds, posterior_m1_yrep.rds\n")
+    if (exists("samples_m1_yrep")) {
+      saveRDS(samples_m1_yrep, file.path(MODEL_OBJ_DIR, "posterior_m1_yrep.rds"))
+      cat("  ✓ Saved: posterior_m1.rds, posterior_m1_yrep.rds\n")
+    } else {
+      cat("  ✓ Saved: posterior_m1.rds\n")
+      cat("  ⚠️ Y_rep unavailable for M1; see m1_yrep_status.txt if present\n")
+    }
   }
   
   # Save Model 2 posteriors
   if (FIT_M2_SUCCESS) {
     saveRDS(samples_m2, file.path(MODEL_OBJ_DIR, "posterior_m2.rds"))
-    saveRDS(samples_m2_yrep, file.path(MODEL_OBJ_DIR, "posterior_m2_yrep.rds"))
-    cat("  ✓ Saved: posterior_m2.rds, posterior_m2_yrep.rds\n")
+    if (exists("samples_m2_yrep")) {
+      saveRDS(samples_m2_yrep, file.path(MODEL_OBJ_DIR, "posterior_m2_yrep.rds"))
+      cat("  ✓ Saved: posterior_m2.rds, posterior_m2_yrep.rds\n")
+    } else {
+      cat("  ✓ Saved: posterior_m2.rds\n")
+      cat("  ⚠️ Y_rep unavailable for M2; see m2_yrep_status.txt if present\n")
+    }
   }
   
   # Save Model 3 posteriors
   if (FIT_M3_SUCCESS) {
     saveRDS(samples_m3, file.path(MODEL_OBJ_DIR, "posterior_m3.rds"))
-    saveRDS(samples_m3_u, file.path(MODEL_OBJ_DIR, "posterior_m3_u.rds"))
-    saveRDS(samples_m3_yrep, file.path(MODEL_OBJ_DIR, "posterior_m3_yrep.rds"))
-    cat("  ✓ Saved: posterior_m3.rds, posterior_m3_u.rds, posterior_m3_yrep.rds\n")
+    if (exists("samples_m3_u")) {
+      saveRDS(samples_m3_u, file.path(MODEL_OBJ_DIR, "posterior_m3_u.rds"))
+    }
+    if (exists("samples_m3_yrep")) {
+      saveRDS(samples_m3_yrep, file.path(MODEL_OBJ_DIR, "posterior_m3_yrep.rds"))
+      if (exists("samples_m3_u")) {
+        cat("  ✓ Saved: posterior_m3.rds, posterior_m3_u.rds, posterior_m3_yrep.rds\n")
+      } else {
+        cat("  ✓ Saved: posterior_m3.rds, posterior_m3_yrep.rds\n")
+        cat("  ⚠️ u draws unavailable for M3; see m3_u_status.txt if present\n")
+      }
+    } else {
+      if (exists("samples_m3_u")) {
+        cat("  ✓ Saved: posterior_m3.rds, posterior_m3_u.rds\n")
+      } else {
+        cat("  ✓ Saved: posterior_m3.rds\n")
+        cat("  ⚠️ u draws and Y_rep unavailable for M3; see status files if present\n")
+      }
+      cat("  ⚠️ Y_rep unavailable for M3; see m3_yrep_status.txt if present\n")
+    }
   }
   
   # Save fit metadata
