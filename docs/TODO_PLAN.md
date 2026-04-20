@@ -3,7 +3,7 @@
 ## Fully Bayesian MCMC Analysis of WHO Data, 2012–2023
 
 > **Course:** Fundamentals of Statistical Learning II — M.Sc. in Data Science, a.y. 2025–2026
-> **Last updated:** 2026-04-05
+> **Last updated:** 2026-04-19
 > **Note:** This is an individual final project. It is submitted as a written report and then discussed orally.
 
 ---
@@ -563,7 +563,7 @@ The following safeguards must be maintained throughout the project:
 # PHASE 8 — Full MCMC Fitting & Diagnostics
 
 > **Goal:** Fit all primary models and verify chain quality.
-> **Execution status (2026-04-19):** `[/]` — M1 diagnostics acceptable after extension; M2 diagnostics acceptable after extended-fast rerun and promotion; M3 centered fit remains unacceptable and non-centered remediation is running.
+> **Execution status (2026-04-19):** `[x]` — M1 diagnostics acceptable after extension; M2 diagnostics acceptable after extended-fast rerun and promotion; M3 promoted via **region-centered non-centered** parameterization with contiguous-region `z`-summing (4 parallel chains via `mclapply`, adapt=1000, burn=8000, sample=10000). Final diagnostics: min ESS = 407.1, max R-hat = 1.0072. Remediation history: centered M3 failed → plain non-centered (fast/extended/strong) failed → region-centered dense/inprod version too slow → optimized contiguous-region region-centered M3 passed. Posterior `u` column indices remapped from permuted → original country_id. `Y_rep` regenerated post-hoc from paired (globals + u) draws (thin=10 → 4000 total draws). Full trail documented in `notes/decision_log.md`.
 
 ### Step 8.1 — Set final MCMC settings
 
@@ -576,27 +576,27 @@ The following safeguards must be maintained throughout the project:
 
 ### Step 8.2 — Fit all three models on locked dataset
 
-- [/] For each model: run pilot → inspect quick diagnostics → run final chains.
-- [/] Save: posterior draws, monitored parameters, runtime, timestamp, seed, model file used.
-- [/] Log runtime and timestamp for each model fit.
+- [x] For each model: run pilot → inspect quick diagnostics → run final chains.
+- [x] Save: posterior draws, monitored parameters, runtime, timestamp, seed, model file used.
+- [x] Log runtime and timestamp for each model fit.
 
 ### Step 8.3 — Save posterior draws in standardized format
 
-- [/] Export posterior samples as `.rds` files in `src/outputs/model_objects/` with common naming/structure.
+- [x] Export posterior samples as `.rds` files in `src/outputs/model_objects/` with common naming/structure.
 
 ### Step 8.4 — Produce visual MCMC diagnostics (for each model)
 
-- [/] Trace plots for key parameters: `beta_0`, `beta_1`–`beta_4`, region effects (`gamma_r`, with baseline `gamma_1 = 0`), `phi`, `sigma_u`, selected `u_i`.
-- [/] Posterior density plots.
-- [/] Autocorrelation plots.
+- [x] Trace plots for key parameters: `beta_0`, `beta_1`–`beta_4`, region effects (`gamma_r`, with baseline `gamma_1 = 0`), `phi`, `sigma_u`, selected `u_i`.
+- [x] Posterior density plots.
+- [x] Autocorrelation plots.
 - [ ] Multi-chain overlaid trace plots.
 
 ### Step 8.5 — Compute numerical diagnostics
 
-- [/] R-hat (target < 1.01, acceptable < 1.05).
-- [/] Effective sample size (target > 400 per key parameter).
-- [/] Monte Carlo standard error.
-- [/] Flag any problematic parameters.
+- [x] R-hat (target < 1.01, acceptable < 1.05). *(M3 max R-hat = 1.0072.)*
+- [x] Effective sample size (target > 400 per key parameter). *(M3 min ESS = 407.1.)*
+- [x] Monte Carlo standard error.
+- [x] Flag any problematic parameters.
 
 ### Step 8.6 — Run formal convergence tests
 
@@ -607,7 +607,7 @@ The following safeguards must be maintained throughout the project:
 
 ### Step 8.7 — Resolve mixing problems (if any)
 
-- [/] If diagnostics poor: extend chains, re-check scaling, try non-centered parameterization for M3, document changes.
+- [x] If diagnostics poor: extend chains, re-check scaling, try non-centered parameterization for M3, document changes. *(M3 required region-centered non-centered parameterization with contiguous-region `z`-summing to resolve additive identifiability between `beta0`, `gamma[r]`, and within-region mean of `u[c]`; full remediation trail in `notes/decision_log.md`.)*
 
 **Deliverables:** Posterior draw files; diagnostics figures; diagnostics summary table; formal convergence test results.
 **Done-when:** All final posteriors come from chains with acceptable diagnostics.
@@ -617,7 +617,7 @@ The following safeguards must be maintained throughout the project:
 # PHASE 9 — Posterior Inference
 
 > **Goal:** Extract and interpret substantive results.
-> **Execution status (2026-04-19):** `[ ]` — blocked until M3 reaches acceptable diagnostics (R-hat <= 1.05 and ESS >= 400 for key parameters).
+> **Execution status (2026-04-19):** `[x]` COMPLETE — ran against promoted region-centered M3. Outputs: `src/outputs/tables/posterior_summaries.csv`, `hypothesis_tests_summary.csv`, `country_random_effects.csv`; `src/outputs/figures/country_re_caterpillar_plot.png`.
 
 ### Step 9.1 — Compute posterior summaries (for each model)
 
@@ -653,7 +653,7 @@ The following safeguards must be maintained throughout the project:
 # PHASE 10 — Posterior Predictive Checks
 
 > **Goal:** Assess whether the estimated models can recover key features of the observed data. This phase directly addresses the course guideline: "discussion on the ability of the estimated model to recover some features of the observed data."
-> **Execution status (2026-04-19):** `[ ]` — blocked until M3 reaches acceptable diagnostics; M1 and M2 predictive artifacts exist.
+> **Execution status (2026-04-19):** `[x]` COMPLETE — all four PPC test quantities computed for M1/M2/M3 from promoted posteriors. M3 `Y_rep` regenerated post-hoc from paired (globals + u) draws (Bayesian p-value on T=mean(Y) ≈ 0.32). Outputs: `src/outputs/tables/ppc_summary_table.csv`, `src/outputs/figures/ppc_m3_*.png`.
 
 ### Step 10.1 — Generate replicated datasets (for each model)
 
@@ -738,7 +738,7 @@ The following safeguards must be maintained throughout the project:
 # PHASE 12 — DIC Model Comparison
 
 > **Goal:** Quantitative model ranking on the same dataset.
-> **Execution status (2026-04-19):** `[/]` — code ready; execution blocked by unresolved M3 convergence.
+> **Execution status (2026-04-19):** `[x]` COMPLETE — observed-data DIC computed for M1/M2/M3 using beta-binomial log-likelihood for M2/M3 (not JAGS default DIC). For M3, `D(theta_bar)` uses posterior means of beta, gamma, phi, **and** u. Final ranking: **M3 DIC = 24,940.1 (p_D = 178.7) < M2 DIC = 27,160.5 < M1 DIC = 2,666,301**. M3 is the preferred model (Delta-DIC vs M2 > 10 → strong evidence). Outputs: `src/outputs/tables/dic_comparison_table.csv`, `src/outputs/model_objects/dic_results.rds`, `src/outputs/tables/dic_interpretation_notes.txt`.
 
 > ⚠️ **Critical warning:** Do NOT use JAGS's default DIC for M2 or M3 as the primary comparison metric. The latent `theta_it` representation makes the default deviance conditional on latent variables rather than the observed-data beta-binomial likelihood. **Primary DIC must be based on observed-data log-likelihood computed in post-processing.**
 
@@ -772,7 +772,7 @@ The following safeguards must be maintained throughout the project:
 
 **Deliverables:** DIC comparison table; interpretation note.
 **Done-when:** Primary model recommendation is quantitatively supported.
-**Status:** `[/]` Code implemented and partially unblocked (M1 available). Final DIC table remains blocked pending M2/M3 posterior files from Phase 8.
+**Status:** `[x]` COMPLETE — M3 preferred (DIC = 24,940.1; Delta-DIC vs M2 = 2,220 → strong evidence).
 
 ---
 
@@ -1019,12 +1019,12 @@ Follow this structure (mirrors course requirements):
 - [x] Baseline region frozen and recorded in decision log
 
 ### Modeling ✓
-- [/] All three Bayesian models fit successfully *(BLOCKED: JAGS not available)*
-- [/] Diagnostics acceptable (R-hat, ESS, visual, formal tests) *(BLOCKED: JAGS not available)*
-- [/] Posterior summaries exported *(BLOCKED: JAGS not available)*
-- [/] PPC completed (4 test quantities + plots) *(BLOCKED: JAGS not available)*
-- [/] DIC completed (observed-data log-likelihood, NOT default JAGS DIC for M2/M3) *(BLOCKED: JAGS not available)*
-- [/] Parameter recovery study completed *(BLOCKED: JAGS not available)*
+- [x] All three Bayesian models fit successfully *(M3 via region-centered non-centered parameterization)*
+- [x] Diagnostics acceptable (R-hat, ESS, visual, formal tests) *(M3: min ESS = 407.1, max R-hat = 1.0072)*
+- [x] Posterior summaries exported
+- [x] PPC completed (4 test quantities + plots)
+- [x] DIC completed (observed-data log-likelihood, NOT default JAGS DIC for M2/M3) *(M3 preferred; DIC = 24,940.1)*
+- [/] Parameter recovery study completed *(pending — unblocked now that M3 has passed)*
 
 ### Extensions ✓
 - [x] Frequentist comparison completed

@@ -390,6 +390,37 @@
 - M3: centered run unacceptable; non-centered remediation running.
 - Phases 9/10/12 remain blocked until M3 diagnostics are acceptable.
 
+### 2026-04-19 / 2026-04-20 — M3 Convergence Remediation Trail (full history)
+
+Four progressively stronger parameterizations were tried before M3 converged. All diagnostic budgets used the same acceptance rule: **all key globals R-hat ≤ 1.05 AND ESS ≥ 400**, with "key globals" = {beta0, beta[1..4], gamma[2..6], phi, sigma_u}.
+
+| Attempt | Parameterization | Chains × adapt × burn × sample | Min ESS (key) | Max R-hat (key) | Verdict |
+|---|---|---|---|---|---|
+| 1 | Centered hierarchical beta-binomial (`model3_hierarchical_betabinomial.jags`) | 4 × 1000 × 2000 × 2000 | 12.5 | 1.157 | **FAIL** (severe mixing on beta0 + gamma) |
+| 2 | Plain non-centered `u = sigma_u * z` (`model3_noncentered.jags`), fast run | 2 × 1000 × 2000 × 2000 | 20 | 1.10 | **FAIL** |
+| 3 | Plain non-centered, extended | 4 × 1000 × 4000 × 6000 | 69 | 1.057 | **FAIL** |
+| 4 | Plain non-centered, strong | 4 × 1000 × 8000 × 10000 | 89.8 | 1.054 | **FAIL** (beta0 Rhat=1.054, ESS=90) |
+| 5 | Region-centered v1: `mean_z_region[r] <- inprod(region_mat[r,], z[]) / n_country_region[r]` | 4 × 200 × 200 × 200 | — | — | **KILLED** at 21 min pilot (dense deterministic graph; every z update triggered O(R·C+C+N) recompute) |
+| 6 | Region-centered v2: **contiguous region-range sum** via `sum(z[region_start[r]:region_end[r]])` after permuting country IDs by region, fit with **4 independent parallel chains via mclapply** | 4 × 1000 × 8000 × 10000 | **407.1** | **1.0072** | **PASS — PROMOTED** |
+
+**Root-cause diagnosis.** The failure mode for attempts 1–4 was additive identifiability between `beta0`, `gamma[r]`, and the within-region mean of `u[c]`. The plain non-centered parameterization decouples scale but leaves the location ridge, so mixing on `beta0` and region effects was weak no matter the compute budget (ESS grew sub-linearly: 12.5 → 20 → 69 → 90 across 4×–50× more work).
+
+**Region-centered fix.** Enforcing sum_{c ∈ region r} u[c] = 0 via `u[c] <- sigma_u * (z[c] - mean_z_region[country_region[c]])` eliminates the additive ridge while preserving AFR baseline (`gamma[1] = 0`) and country-level variance `sigma_u`.
+
+**Performance fix.** Attempt 5 used `inprod(region_mat[r,], z[])` with a 6×180 padded indicator matrix — JAGS treats this as a dense graph where each `z[c]` feeds every `mean_z_region[r]`, so each MCMC update did ~3000 recomputations. 21 min for just the pilot (4ch × 600 iter) proved this won't scale. The v2 form permutes country IDs so that countries are contiguous by region, then uses `sum(z[region_start[r]:region_end[r]])` — O(n_country_region[r]) per region, ~9× faster per iteration.
+
+**Why parallel chains.** With rjags's sequential chains, the 4-chain full fit would have taken ~7h wall. `parallel::mclapply` across 4 physical cores reduced wall time to 4.5h (laptop slept overnight; actual compute was closer to 2h active).
+
+**Final fit (2026-04-20):** `min ESS = 407.1`, `max R-hat = 1.0072`, all 12 key globals pass acceptance rule. Promoted to `posterior_m3.rds` + `posterior_m3_u.rds`. The permuted-country-ID version of u was remapped post-hoc to original country IDs so downstream Phase 9/10/12 code works unchanged.
+
+**Post-fit downstream work (all done 2026-04-20):**
+- `posterior_m3_yrep.rds` regenerated in R from paired (beta0, beta, gamma, phi, u) draws (thin=10 → 4000 draws total). Bayesian p-value on mean(Y) = 0.321, no global bias.
+- Phase 9 complete: posterior summaries, directional probabilities, country RE caterpillar plot, all tables.
+- Phase 10 complete: PPC computed with T1a/T1b/T2/T3/T4a/T4b for all three models; figures saved.
+- Phase 12 complete: **M3 wins on observed-data DIC**. DIC(M3) = 24940.1 (p_D = 178.7, ~matches 180 country REs + fixed effects), DIC(M2) = 27160.5 (Δ +2220), DIC(M1) = 2,666,301 (Δ +2.64M — binomial vastly overdispersed).
+
+**Consolidation (2026-04-20):** `src/main.R` Phase 8 M3 block replaced in-place with the region-centered parallel workflow plus an idempotent cache check — a re-run of `src/main.R` detects the promoted files and skips refitting. Development scripts in `src/scripts/` are retained as an audit trail of the remediation trail above but are not on the final execution path. `src/main.R` remains the sole execution source of truth.
+
 ### 2026-04-18 — Posterior Inference (Phase 9)
 
 | Decision | Choice | Rationale |

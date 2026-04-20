@@ -144,11 +144,13 @@ Three Bayesian models are compared on the same locked country-year dataset:
 | **M2** — Beta-Binomial | Beta-Binomial | ✓ (φ) | ✗ | Does extra-binomial dispersion improve fit? |
 | **M3** — Hierarchical Beta-Binomial | Beta-Binomial | ✓ (φ) | ✓ (u_i, σ_u) | Do persistent country effects remain? |
 
+> **M3 parameterization:** The accepted M3 uses a **region-centered non-centered** parameterization (`u[c] = sigma_u * (z[c] - mean_z_region[country_region[c]])` with `z[c] ~ N(0,1)`), which enforces `sum_{c in r} u[c] = 0` within each WHO region. This separates region fixed effects (`gamma_r`) from within-region country random effects, resolving an additive identifiability issue that made plain centered and plain non-centered parameterizations fail to converge. For efficiency, country IDs are permuted to be contiguous within region so the within-region mean is computed via a fast contiguous-range `sum()` rather than a dense `inprod()`. Chains run in parallel (`mclapply`) with independent RNG seeds. Full remediation trail in `notes/decision_log.md`.
+
 All models use:
 - **Response:** Treatment success counts `Y_it` out of cohort `n_it`
 - **Predictors:** Year, incidence, mortality, case detection (standardized), WHO region (fixed effects)
 - **Priors:** Weakly informative Normal(0, 2.5²) for coefficients; Gamma(2, 0.1) for φ; Half-Normal(0, 1) for σ_u
-- **MCMC:** 4 chains × 8,000 post-burn-in iterations via JAGS (`rjags`)
+- **MCMC:** 4 chains × 8,000 post-burn-in iterations via JAGS (`rjags`); M3 uses 4 parallel chains via `parallel::mclapply` with independent RNG seeds (adapt=1000, burn=8000, sample=10000)
 
 ---
 

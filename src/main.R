@@ -4739,108 +4739,171 @@ if (!jags_available) {
   })
   
   # ============================================================================
-  # Fit Model 3: Hierarchical Beta-Binomial
+  # Fit Model 3: Hierarchical Beta-Binomial (region-centered non-centered)
   # ============================================================================
-  cat("\n--- Fitting Model 3: Hierarchical Beta-Binomial ---\n")
-  
+  # History: centered, plain non-centered (fast/extended/strong), and
+  # inprod-based region-centered parameterizations all failed (mixing or
+  # runtime). The accepted M3 is the region-centered non-centered form with
+  # contiguous region-range summing, fit with 4 independent parallel chains.
+  # See notes/decision_log.md for the full remediation trail.
+  cat("\n--- Fitting Model 3: Hierarchical Beta-Binomial (region-centered) ---\n")
+
   start_time_m3 <- Sys.time()
-  
-  tryCatch({
-    cat("  Compiling JAGS model...\n")
-    
-    inits_m3 <- lapply(1:mcmc_cfg$n_chains, function(i) generate_inits("M3", i))
-    
-    jags_m3 <- jags.model(
-      file = MODEL3_FILE,
-      data = jags_data_hier,
-      inits = inits_m3,
-      n.chains = mcmc_cfg$n_chains,
-      n.adapt = mcmc_cfg$n_adapt,
-      quiet = FALSE
-    )
-    
-    cat("  Running burn-in...\n")
-    update(jags_m3, n.iter = mcmc_cfg$n_burnin, progress.bar = "text")
-    
-    cat("  Sampling posterior...\n")
-    samples_m3 <- coda.samples(
-      jags_m3,
-      variable.names = params_m3_diag,
-      n.iter = mcmc_cfg$n_iter,
-      thin = mcmc_cfg$n_thin,
-      progress.bar = "text"
-    )
 
-    # Save parameter draws immediately so they are not lost if downstream steps fail.
-    saveRDS(samples_m3, file.path(MODEL_OBJ_DIR, "posterior_m3.rds"))
-    cat("  ✓ Saved parameter draws: posterior_m3.rds\n")
+  # Idempotent cache check: if promoted files exist AND pass the acceptance
+  # rule (all key R-hat <= 1.05 AND all key ESS >= 400), skip refit.
+  m3_post_file <- file.path(MODEL_OBJ_DIR, "posterior_m3.rds")
+  m3_u_file    <- file.path(MODEL_OBJ_DIR, "posterior_m3_u.rds")
+  m3_yrep_file <- file.path(MODEL_OBJ_DIR, "posterior_m3_yrep.rds")
+  m3_diag_file <- file.path(DIAGNOSTICS_DIR, "m3_diagnostics_summary.csv")
+
+  m3_cache_valid <- FALSE
+  if (file.exists(m3_post_file) && file.exists(m3_u_file) && file.exists(m3_diag_file)) {
+    diag_m3 <- tryCatch(read.csv(m3_diag_file, stringsAsFactors = FALSE), error = function(e) NULL)
+    key_m3 <- c("beta0", "beta[1]", "beta[2]", "beta[3]", "beta[4]",
+                "gamma[2]", "gamma[3]", "gamma[4]", "gamma[5]", "gamma[6]",
+                "phi", "sigma_u")
+    if (!is.null(diag_m3) && all(key_m3 %in% diag_m3$parameter)) {
+      dk <- diag_m3[diag_m3$parameter %in% key_m3, ]
+      m3_cache_valid <- all(dk$rhat <= 1.05, na.rm = TRUE) && all(dk$ess >= 400, na.rm = TRUE)
+    }
+  }
+
+  if (m3_cache_valid) {
+    cat("  ✓ Promoted region-centered M3 cache detected (all key Rhat<=1.05 and ESS>=400)\n")
+    cat("    Skipping refit. To force refit, delete posterior_m3.rds + posterior_m3_u.rds.\n")
+    samples_m3   <- readRDS(m3_post_file)
+    samples_m3_u <- readRDS(m3_u_file)
     FIT_M3_SUCCESS <- TRUE
-    
-    # Sample country random effects separately.
-    cat("  Sampling random effects (u) for country rankings...\n")
-    tryCatch({
-      samples_m3_u <- coda.samples(
-        jags_m3,
-        variable.names = c("u"),
-        n.iter = mcmc_cfg$n_iter,
-        thin = mcmc_cfg$n_thin,
-        progress.bar = "none"
-      )
-      saveRDS(samples_m3_u, file.path(MODEL_OBJ_DIR, "posterior_m3_u.rds"))
-      FIT_M3_U_SUCCESS <- TRUE
-      cat("  ✓ Saved random effects draws: posterior_m3_u.rds\n")
-    }, error = function(e_u) {
-      FIT_M3_U_SUCCESS <<- FALSE
-      cat(sprintf("  ⚠️ M3 u sampling failed: %s\n", e_u$message))
-      writeLines(
-        c(
-          paste("timestamp:", as.character(Sys.time())),
-          "model: M3",
-          "stage: u sampling",
-          paste("error:", e_u$message),
-          "note: posterior_m3.rds was saved before this error"
-        ),
-        file.path(DIAG_DIR, "m3_u_status.txt")
-      )
-    })
-
-    # Sample Y_rep separately; keep parameter posterior even if this step fails.
-    cat("  Sampling Y_rep for posterior predictive checks...\n")
-    tryCatch({
-      samples_m3_yrep <- coda.samples(
-        jags_m3,
-        variable.names = c("Y_rep"),
-        n.iter = mcmc_cfg$n_iter,
-        thin = mcmc_cfg$n_thin,
-        progress.bar = "none"
-      )
-      saveRDS(samples_m3_yrep, file.path(MODEL_OBJ_DIR, "posterior_m3_yrep.rds"))
+    FIT_M3_U_SUCCESS <- TRUE
+    if (file.exists(m3_yrep_file)) {
+      samples_m3_yrep <- readRDS(m3_yrep_file)
       FIT_M3_YREP_SUCCESS <- TRUE
-      cat("  ✓ Saved Y_rep draws: posterior_m3_yrep.rds\n")
-    }, error = function(e_yrep) {
-      FIT_M3_YREP_SUCCESS <<- FALSE
-      cat(sprintf("  ⚠️ M3 Y_rep sampling failed: %s\n", e_yrep$message))
-      writeLines(
-        c(
-          paste("timestamp:", as.character(Sys.time())),
-          "model: M3",
-          "stage: Y_rep sampling",
-          paste("error:", e_yrep$message),
-          "note: posterior_m3.rds was saved before this error"
-        ),
-        file.path(DIAG_DIR, "m3_yrep_status.txt")
+    } else {
+      FIT_M3_YREP_SUCCESS <- FALSE
+    }
+  } else {
+    tryCatch({
+      suppressPackageStartupMessages(library(parallel))
+
+      # --- Extend jags_data_hier with contiguous region-range indexing ---
+      cat("  Building region-centered JAGS data (permuting country IDs by region)...\n")
+      jd <- jags_data_hier
+      df_cr <- unique(data.frame(country = jd$country, region = jd$region))
+      df_cr <- df_cr[order(df_cr$country), ]
+      stopifnot(nrow(df_cr) == jd$C, all(df_cr$country == seq_len(jd$C)))
+      old_country_region <- as.integer(df_cr$region)
+      perm <- order(old_country_region, seq_len(jd$C))
+      new_of_old <- integer(jd$C); new_of_old[perm] <- seq_len(jd$C)
+      country_region_new <- old_country_region[perm]
+      n_country_region <- as.integer(tabulate(country_region_new, nbins = jd$R))
+      region_end <- as.integer(cumsum(n_country_region))
+      region_start <- as.integer(c(1L, head(region_end, -1) + 1L))
+      row_country_new <- as.integer(new_of_old[jd$country])
+
+      jd_rc <- list(
+        N = jd$N, Y = jd$Y, n = jd$n, X = jd$X, n_pred = jd$n_pred,
+        region = jd$region, R = jd$R,
+        country = row_country_new, C = jd$C,
+        country_region = country_region_new,
+        n_country_region = n_country_region,
+        region_start = region_start, region_end = region_end
       )
+      saveRDS(jd_rc, file.path(MODEL_OBJ_DIR, "jags_data_hier_regioncentered.rds"))
+
+      model_file_rc <- file.path(MODELS_DIR, "model3_noncentered_regioncentered.jags")
+      stopifnot(file.exists(model_file_rc))
+
+      # --- Parallel 4-chain fit via mclapply ---
+      PARAMS_RC <- c("beta0", "beta", "gamma", "phi", "sigma_u", "u")
+      rng_names <- c("base::Wichmann-Hill", "base::Marsaglia-Multicarry",
+                     "base::Super-Duper", "base::Mersenne-Twister")
+      chain_seeds <- c(202611L, 202612L, 202613L, 202614L)
+
+      run_chain_m3_rc <- function(chain_id) {
+        suppressPackageStartupMessages({ library(rjags); library(coda) })
+        inits <- list(.RNG.name = rng_names[chain_id], .RNG.seed = chain_seeds[chain_id])
+        m <- jags.model(model_file_rc, data = jd_rc, inits = inits,
+                        n.chains = 1, n.adapt = mcmc_cfg$n_adapt, quiet = TRUE)
+        update(m, mcmc_cfg$n_burnin, progress.bar = "none")
+        s <- coda.samples(m, PARAMS_RC, mcmc_cfg$n_iter, progress.bar = "none")
+        s[[1]]
+      }
+
+      n_chains_rc <- max(mcmc_cfg$n_chains, 4L)
+      cat(sprintf("  Launching %d parallel chains (adapt=%d, burn=%d, sample=%d)...\n",
+                  n_chains_rc, mcmc_cfg$n_adapt, mcmc_cfg$n_burnin, mcmc_cfg$n_iter))
+      chains_rc <- mclapply(seq_len(n_chains_rc), run_chain_m3_rc,
+                            mc.cores = min(n_chains_rc, parallel::detectCores()),
+                            mc.preschedule = FALSE)
+      if (any(sapply(chains_rc, inherits, "try-error"))) {
+        stop("One or more M3 parallel chains failed.")
+      }
+      mcmc_full <- as.mcmc.list(chains_rc)
+
+      # --- Split into globals and u (remap u to original country IDs) ---
+      all_names <- colnames(as.matrix(mcmc_full))
+      global_names <- all_names[!grepl("^u\\[", all_names)]
+      u_names_new  <- paste0("u[", seq_len(jd$C), "]")
+      samples_m3   <- mcmc_full[, global_names, drop = FALSE]
+      pick_cols <- new_of_old
+      samples_m3_u <- as.mcmc.list(lapply(mcmc_full, function(mcm) {
+        um <- as.matrix(mcm)[, u_names_new, drop = FALSE][, pick_cols, drop = FALSE]
+        colnames(um) <- paste0("u[", seq_len(jd$C), "]")
+        mcmc(um, start = start(mcm), end = end(mcm), thin = thin(mcm))
+      }))
+
+      saveRDS(samples_m3, m3_post_file)
+      saveRDS(samples_m3_u, m3_u_file)
+      cat("  ✓ Saved posterior_m3.rds + posterior_m3_u.rds (u indexed by original country_id)\n")
+      FIT_M3_SUCCESS <- TRUE
+      FIT_M3_U_SUCCESS <- TRUE
+
+      # --- Regenerate Y_rep in post-hoc R (thin=10 -> ~1000 draws/chain) ---
+      cat("  Regenerating Y_rep from paired (beta0, beta, gamma, phi, u) draws...\n")
+      n_iter_rc <- nrow(samples_m3[[1]])
+      THIN_YREP <- 10L
+      keep_idx <- seq(THIN_YREP, n_iter_rc, by = THIN_YREP)
+      beta_cols_rc  <- paste0("beta[",  seq_len(jd$n_pred), "]")
+      gamma_cols_rc <- paste0("gamma[", seq_len(jd$R), "]")
+      u_cols_orig   <- paste0("u[", seq_len(jd$C), "]")
+      yrep_chains <- vector("list", n_chains_rc)
+      for (ch in seq_len(n_chains_rc)) {
+        Gmat <- as.matrix(samples_m3[[ch]])[keep_idx, , drop = FALSE]
+        Umat <- as.matrix(samples_m3_u[[ch]])[keep_idx, u_cols_orig, drop = FALSE]
+        beta0_v <- Gmat[, "beta0"]
+        beta_m  <- Gmat[, beta_cols_rc,  drop = FALSE]
+        gamma_m <- Gmat[, gamma_cols_rc, drop = FALSE]
+        phi_v   <- Gmat[, "phi"]
+        XB <- jd$X %*% t(beta_m)
+        Yrep_mat <- matrix(0L, nrow = length(keep_idx), ncol = jd$N)
+        for (b in seq_along(keep_idx)) {
+          eta <- beta0_v[b] + XB[, b] + gamma_m[b, jd$region] + Umat[b, jd$country]
+          mu  <- plogis(eta)
+          alpha <- mu * phi_v[b]
+          betp  <- (1 - mu) * phi_v[b]
+          theta_rep <- rbeta(jd$N, alpha, betp)
+          theta_rep[!is.finite(theta_rep)] <- mu[!is.finite(theta_rep)]
+          theta_rep <- pmin(pmax(theta_rep, 1e-12), 1 - 1e-12)
+          Yrep_mat[b, ] <- rbinom(jd$N, size = jd$n, prob = theta_rep)
+        }
+        colnames(Yrep_mat) <- paste0("Y_rep[", seq_len(jd$N), "]")
+        yrep_chains[[ch]] <- mcmc(Yrep_mat, start = 1, end = length(keep_idx), thin = 1)
+      }
+      samples_m3_yrep <- as.mcmc.list(yrep_chains)
+      saveRDS(samples_m3_yrep, m3_yrep_file)
+      FIT_M3_YREP_SUCCESS <- TRUE
+      cat("  ✓ Saved posterior_m3_yrep.rds (post-hoc from promoted fit)\n")
+
+      end_time_m3 <- Sys.time()
+      fit_times$M3 <- difftime(end_time_m3, start_time_m3, units = "mins")
+      cat(sprintf("  ✓ Model 3 fitted successfully in %.1f minutes\n", as.numeric(fit_times$M3)))
+
+    }, error = function(e) {
+      cat(sprintf("  ✗ Error fitting Model 3 (region-centered): %s\n", e$message))
+      FIT_M3_SUCCESS <<- FALSE
     })
-    
-    end_time_m3 <- Sys.time()
-    fit_times$M3 <- difftime(end_time_m3, start_time_m3, units = "mins")
-    
-    cat(sprintf("  ✓ Model 3 fitted successfully in %.1f minutes\n", as.numeric(fit_times$M3)))
-    
-  }, error = function(e) {
-    cat(sprintf("  ✗ Error fitting Model 3: %s\n", e$message))
-    FIT_M3_SUCCESS <<- FALSE
-  })
+  }
   
   cat("\nStep 8.2 complete.\n")
 }
