@@ -12667,7 +12667,7 @@ FROZEN_YEAR_WINDOW <- c(2012, 2023)
 locked_years <- unique(locked_data$year)
 locked_year_range <- c(min(locked_years), max(locked_years))
 
-year_window_consistent <- identical(locked_year_range, FROZEN_YEAR_WINDOW)
+year_window_consistent <- isTRUE(all(locked_year_range == FROZEN_YEAR_WINDOW))
 consistency_checks$year_window <- list(
   check = "Year window matches across all references",
   expected = paste(FROZEN_YEAR_WINDOW, collapse = "-"),
@@ -13386,12 +13386,8 @@ A: It is only populated for 2020–2023. Using it as the main filter would colla
 
 ---
 
-*Notes generated: ' || format(Sys.time(), "%Y-%m-%d %H:%M:%S") || '*
+*Notes generated automatically by Phase 17.*
 '
-
-# Fix the date in the notes
-oral_notes <- gsub("\\|\\| format\\(Sys\\.time\\(\\), \"%Y-%m-%d %H:%M:%S\"\\) \\|\\|", 
-                   format(Sys.time(), "%Y-%m-%d %H:%M:%S"), oral_notes)
 
 # Save oral discussion notes
 oral_notes_path <- file.path(REPORT_DIR, "oral_discussion_notes.md")

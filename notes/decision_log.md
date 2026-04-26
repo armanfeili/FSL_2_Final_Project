@@ -1103,6 +1103,32 @@ Phase 17 code implemented and complete. All consistency checks automated. Reprod
 - Oral discussion notes contain placeholders for posterior findings
 - Full dry run requires JAGS installation for end-to-end execution
 
+### 2026-04-26 — Execution Status Checkpoint (post-dispatcher)
+
+| Decision | Choice | Evidence / Rationale |
+|----------|--------|----------------------|
+| Phase 11 status | **IN PROGRESS** | `src/outputs/runs/phase11_full_20260426_145158.log` shows M1 completed 30/30 and M2 started; completion is not claimed until M1+M2+M3 recovery outputs are present. |
+| Phase 13 status | **PARTIAL** | Dispatcher log records M1 GLM and M2 VGAM success, but M3 GLMM failed with `function 'cholmod_factor_ldetA' not provided by package 'Matrix'`; no `freq_m3` object exists. |
+| Phase 14 status | **PARTIAL** | `sensitivity_14_3_phi_prior_specs.csv` and `sensitivity_14_4_sigma_prior_specs.csv` were written, but log explicitly says "would fit alternative ... model here"; no posterior sensitivity `.rds` objects exist. |
+| Phase 15 status | **COMPLETE** | Manifest and reproducibility appendix artifacts exist (`table_manifest.csv`, `figure_manifest.csv`, `report_tables_list.csv`, `report_figures_list.csv`, `reproducibility_appendix.txt`). |
+| Phase 16 status | **PARTIAL** | Report scaffolding files exist, but `src/report/report.Rmd` still contains stale placeholders and is not final. |
+| Phase 17 status | **PARTIAL** | Dispatcher reached Step 17.4 then halted with `invalid 'x' type in 'x || y'` during oral notes generation. |
+
+### 2026-04-26 — Phase 17.4 Oral Notes Bug Fix
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Root-cause fix in `src/main.R` | Replaced problematic literal line `*Notes generated: ' || format(...) || '*` with plain text and removed unnecessary `gsub` substitution block | The embedded `'|| ... ||'` inside a single-quoted string caused expression parsing into `x || y`, which triggered `invalid 'x' type in 'x || y'`. Minimal patch avoids changing any model logic and only targets Step 17.4 note generation. |
+| Follow-up consistency fix in `src/main.R` | Changed year-window check from `identical(locked_year_range, FROZEN_YEAR_WINDOW)` to `isTRUE(all(locked_year_range == FROZEN_YEAR_WINDOW))` | `identical` was too strict on object type/attributes and produced a false year-window mismatch despite matching values (`2012-2023`). |
+| Verification run scope | Re-ran only Phase 17 block (with `locked_data` loaded), not the full dispatcher | Confirms oral-note and Q&A generation now complete without launching duplicate heavy jobs. |
+
+### 2026-04-26 — Phase 17 Re-Run Outcome
+
+| Decision | Choice | Evidence |
+|----------|--------|----------|
+| Phase 17 status after targeted rerun | **COMPLETE** (within current available outputs) | Output summary reports all checks passed; files regenerated: `consistency_check_results.csv`, `reproducibility_verification.csv`, `submission_package_checklist.csv`, `oral_qa_quick_reference.csv`, `src/report/oral_discussion_notes.md`. |
+| Remaining submission gap | **Final report PDF still pending** | `submission_package_checklist.csv` still marks final PDF missing; report finalization deferred until Phase 11 recovery and pending sensitivity fit decisions are resolved. |
+
 ---
 
 ## Override Log

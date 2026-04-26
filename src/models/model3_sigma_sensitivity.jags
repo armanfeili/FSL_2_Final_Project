@@ -1,0 +1,36 @@
+
+model {
+  # Priors
+  beta0 ~ dnorm(0, 0.16)
+  for (j in 1:p) {
+    beta[j] ~ dnorm(0, 0.16)
+  }
+  for (r in 2:R) {
+    gamma[r] ~ dnorm(0, 0.16)
+  }
+  gamma[1] <- 0
+  phi ~ dgamma(2, 0.1)
+  
+  # ALTERNATIVE sigma_u prior: Half-Normal(0, 2.5) -> wider
+  tau_u ~ dgamma(0.5, 0.08)  # Approximates Half-Normal(0, 2.5)
+  sigma_u <- 1/sqrt(tau_u)
+  
+  # Country random effects
+  for (c in 1:C) {
+    u[c] ~ dnorm(0, tau_u)
+  }
+  
+  # Likelihood
+  for (i in 1:N) {
+    logit_mu[i] <- beta0 + inprod(X[i,], beta) + gamma[region[i]] + u[country[i]]
+    mu[i] <- ilogit(logit_mu[i])
+    alpha[i] <- mu[i] * phi
+    b[i] <- (1 - mu[i]) * phi
+    theta[i] ~ dbeta(alpha[i], b[i])
+    Y[i] ~ dbin(theta[i], n[i])
+    
+    # Posterior predictive
+    Y_rep[i] ~ dbin(theta[i], n[i])
+  }
+}
+

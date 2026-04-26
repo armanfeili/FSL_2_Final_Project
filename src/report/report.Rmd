@@ -1,0 +1,440 @@
+---
+title: "Bayesian Modeling of Cross-Country Tuberculosis Treatment Success"
+subtitle: "A Fully Bayesian MCMC Analysis of WHO Data, 2012-2023"
+author: "[Your Name]"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    fig_caption: true
+    latex_engine: xelatex
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+    theme: readable
+bibliography: references.bib
+csl: apa.csl
+header-includes:
+  - \usepackage{booktabs}
+  - \usepackage{longtable}
+  - \usepackage{array}
+  - \usepackage{multirow}
+  - \usepackage{float}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  warning = FALSE,
+  message = FALSE,
+  fig.align = "center",
+  fig.width = 6,
+  fig.height = 4,
+  out.width = "80%"
+)
+
+# Load packages
+library(dplyr)
+library(ggplot2)
+library(knitr)
+library(kableExtra)
+
+# Set paths relative to report directory
+PROJECT_ROOT <- normalizePath(file.path(getwd(), ".."))
+TABLES_DIR <- file.path(PROJECT_ROOT, "outputs", "tables")
+FIGURES_DIR <- file.path(PROJECT_ROOT, "outputs", "figures")
+DIAGNOSTICS_DIR <- file.path(PROJECT_ROOT, "outputs", "diagnostics")
+DATA_PROCESSED <- file.path(PROJECT_ROOT, "..", "data", "data_processed")
+```
+
+# Abstract
+
+**Background:** Tuberculosis (TB) remains a major global health challenge. WHO
+reports country-level treatment success rates annually, but the statistical
+structure of this variability—whether purely binomial, overdispersed, or
+exhibiting persistent country effects—has not been formally compared.
+**Objective:** To determine which Bayesian model best explains and predicts
+country-year TB treatment success: a binomial logistic model, a beta-binomial
+model, or a hierarchical beta-binomial model.
+
+**Methods:** We analyzed WHO TB data from 2012-2023 covering `r format(1862, big.mark=",")` 
+country-years across 180 countries. Three Bayesian models of increasing complexity
+were fitted via MCMC (JAGS) and compared using the Deviance Information Criterion
+(DIC) and posterior predictive checks.
+
+**Results:** [To be completed when Bayesian posteriors are available]
+
+**Conclusion:** [To be completed when Bayesian posteriors are available]
+
+**Keywords:** Tuberculosis, Bayesian inference, beta-binomial, overdispersion,
+hierarchical model, MCMC, DIC
+
+
+# Introduction & Research Gap
+
+## Background
+
+Tuberculosis (TB) remains one of the leading causes of death from a single
+infectious agent worldwide. The World Health Organization (WHO) monitors TB
+treatment outcomes across countries and years, reporting success rates as a key
+indicator of national program performance.
+
+## Research Gap
+
+While WHO provides descriptive indicators, a formal Bayesian comparison of
+alternative uncertainty structures for treatment success remains unaddressed.
+The central inferential question is:
+
+> Are differences in TB treatment success across countries and years adequately
+> explained by simple sampling variability, or do we need overdispersion and
+> hierarchical country effects to model them realistically?
+
+## Research Question
+
+**Which Bayesian model best explains and predicts country-year TB treatment
+success in 2012-2023: a binomial logistic model, a beta-binomial model, or a
+hierarchical beta-binomial model?**
+
+This question is:
+
+- **Sharp:** It targets a specific comparison among well-defined models
+- **Measurable:** It is directly answerable via DIC and posterior predictive checks
+- **Aligned:** All three models are fit to the same cleaned dataset
+
+
+# Dataset & Analysis Goals
+
+## Data Sources
+
+```{r data-sources, results="asis"}
+data_sources <- data.frame(
+  File = c("TB_outcomes_2026-04-04.csv", "TB_burden_countries_2026-04-04.csv", 
+           "TB_data_dictionary_2026-04-04.csv"),
+  Role = c("Treatment outcomes (response)", "Epidemiological burden (predictors)", 
+           "Variable definitions"),
+  stringsAsFactors = FALSE
+)
+
+kable(data_sources, caption = "Data source files from WHO", booktabs = TRUE) %>%
+  kable_styling(latex_options = c("hold_position"))
+```
+
+## Unit of Analysis
+
+One row = one country-year. The composite key is (iso3, year).
+
+## Analysis Goals
+
+1. Compare three Bayesian models using DIC and posterior predictive checks
+2. Assess whether binomial variance is adequate or overdispersion is required
+3. Quantify country-level heterogeneity in treatment success
+
+
+# Data Construction & Cleaning
+
+## Filtering Pipeline
+
+```{r attrition-table}
+attrition_path <- file.path(TABLES_DIR, "attrition_table.csv")
+if (file.exists(attrition_path)) {
+  attrition <- read.csv(attrition_path)
+  kable(attrition, caption = "Sample attrition at each filtering step", 
+        booktabs = TRUE) %>%
+    kable_styling(latex_options = c("hold_position", "scale_down"))
+}
+```
+
+## Final Sample
+
+```{r final-sample}
+snapshot_path <- file.path(TABLES_DIR, "final_sample_snapshot.csv")
+if (file.exists(snapshot_path)) {
+  snapshot <- read.csv(snapshot_path)
+  kable(snapshot, caption = "Final sample characteristics", booktabs = TRUE) %>%
+    kable_styling(latex_options = c("hold_position"))
+}
+```
+
+## Attrition Flow
+
+```{r attrition-flow, fig.cap="Attrition flow through filtering pipeline"}
+attrition_fig <- file.path(FIGURES_DIR, "attrition_flow.png")
+if (file.exists(attrition_fig)) knitr::include_graphics(attrition_fig)
+```
+
+
+# Exploratory Analysis
+
+## Success Rate Distribution
+
+```{r success-dist, fig.cap="Distribution of country-year treatment success rates"}
+fig_path <- file.path(FIGURES_DIR, "success_rate_distribution.png")
+if (file.exists(fig_path)) knitr::include_graphics(fig_path)
+```
+
+## Temporal Trends by Region
+
+```{r temporal-trends, fig.cap="Temporal trends in treatment success by WHO region"}
+fig_path <- file.path(FIGURES_DIR, "temporal_trend_by_region.png")
+if (file.exists(fig_path)) knitr::include_graphics(fig_path)
+```
+
+## Overdispersion Evidence
+
+```{r sd-ratio, fig.cap="Distribution of SD ratios (observed/expected binomial)"}
+fig_path <- file.path(FIGURES_DIR, "country_sd_ratio_distribution.png")
+if (file.exists(fig_path)) knitr::include_graphics(fig_path)
+```
+
+The median SD ratio exceeds 1, indicating systematic overdispersion beyond
+binomial sampling variability. This motivates the beta-binomial extension.
+
+
+# Model 1: Binomial Logistic
+
+## Specification
+
+$$Y_{it} \sim \text{Binomial}(n_{it}, p_{it})$$
+
+$$\text{logit}(p_{it}) = \beta_0 + \mathbf{x}_{it}^\top \boldsymbol{\beta} + \gamma_{r[i]}$$
+
+Where:
+- $Y_{it}$ = treatment successes in country $i$, year $t$
+- $n_{it}$ = cohort size
+- $\mathbf{x}_{it}$ = standardized predictors (year, incidence, mortality, case detection)
+- $\gamma_{r[i]}$ = WHO region fixed effects (baseline: AFR)
+
+## Purpose
+
+M1 tests whether ordinary binomial variability is sufficient to explain the data.
+
+
+# Model 2: Beta-Binomial
+
+## Specification
+
+$$Y_{it} \sim \text{Beta-Binomial}(n_{it}, \mu_{it}, \phi)$$
+
+$$\text{logit}(\mu_{it}) = \beta_0 + \mathbf{x}_{it}^\top \boldsymbol{\beta} + \gamma_{r[i]}$$
+
+Where:
+- $\phi$ = overdispersion parameter
+- $\text{Var}(Y_{it}) = n_{it} \mu_{it}(1-\mu_{it}) \frac{\phi + n_{it}}{\phi + 1}$
+
+## Purpose
+
+M2 tests whether extra-binomial dispersion (captured by $\phi$) improves fit.
+As $\phi \to \infty$, M2 reduces to M1.
+
+
+# Model 3: Hierarchical Beta-Binomial
+
+## Specification
+
+$$Y_{it} \sim \text{Beta-Binomial}(n_{it}, \mu_{it}, \phi)$$
+
+$$\text{logit}(\mu_{it}) = \beta_0 + \mathbf{x}_{it}^\top \boldsymbol{\beta} + \gamma_{r[i]} + u_i$$
+
+$$u_i \sim N(0, \sigma_u^2)$$
+
+Where:
+- $u_i$ = country-specific random intercept
+- $\sigma_u$ = between-country standard deviation
+
+## Purpose
+
+M3 tests whether persistent country heterogeneity (captured by $u_i$ and $\sigma_u$)
+remains after controlling for observed covariates and overdispersion.
+
+
+# Prior Specification
+
+```{r prior-table}
+prior_path <- file.path(TABLES_DIR, "prior_specification.csv")
+if (file.exists(prior_path)) {
+  priors <- read.csv(prior_path)
+  kable(priors, caption = "Prior distributions for all model parameters", 
+        booktabs = TRUE) %>%
+    kable_styling(latex_options = c("hold_position"))
+}
+```
+
+## Prior Predictive Checks
+
+```{r prior-predictive, fig.cap="Prior predictive distributions showing plausibility of priors"}
+fig_path <- file.path(FIGURES_DIR, "prior_predictive_combined.png")
+if (file.exists(fig_path)) knitr::include_graphics(fig_path)
+```
+
+All priors produce plausible prior predictive distributions covering the observed
+success rate range without excessive concentration.
+
+
+# MCMC Implementation
+
+*[This section will be completed when JAGS is available and Phase 8 is executed]*
+
+## Configuration
+
+- Chains: 4
+- Adaptation: 1,000 iterations
+- Burn-in: 4,000 iterations
+- Post-burn-in: 8,000 iterations per chain
+- Thinning: None
+- Total posterior samples: 32,000
+
+
+# MCMC Diagnostics
+
+*[This section will be completed when JAGS is available and Phase 8 is executed]*
+
+## Convergence Criteria
+
+- R-hat < 1.05 for all parameters
+- Effective sample size (ESS) > 400 for key parameters
+
+
+# Parameter Recovery
+
+*[This section will be completed when JAGS is available and Phase 11 is executed]*
+
+## Recovery Study Design
+
+- 50 simulated datasets per model
+- True parameters: hand-chosen plausible values
+- Evaluation metrics: bias, RMSE, 95% CI coverage
+
+
+# Posterior Inference
+
+*[This section will be completed when JAGS is available and Phase 9 is executed]*
+
+## Expected Outputs
+
+- Posterior summaries (mean, median, SD, 95% CI, 95% HPD)
+- Directional probabilities for fixed effects
+- Country random effect rankings (M3)
+
+
+# Posterior Predictive Checks
+
+*[This section will be completed when JAGS is available and Phase 10 is executed]*
+
+## Test Quantities
+
+1. Mean success rate (weighted and unweighted)
+2. Variance of success rates
+3. Count below 70% threshold
+4. Within-region variance
+
+
+# DIC Model Comparison
+
+*[This section will be completed when JAGS is available and Phase 12 is executed]*
+
+## DIC Interpretation
+
+- $\Delta$DIC > 10: Strong evidence for lower-DIC model
+- $\Delta$DIC 5-10: Moderate evidence
+- $\Delta$DIC < 5: Interpret cautiously
+
+
+# Frequentist Comparison
+
+```{r frequentist-table}
+freq_path <- file.path(TABLES_DIR, "bayesian_vs_frequentist_comparison.csv")
+if (file.exists(freq_path)) {
+  freq_comp <- read.csv(freq_path)
+  kable(freq_comp, caption = "Bayesian vs. Frequentist coefficient comparison",
+        booktabs = TRUE) %>%
+    kable_styling(latex_options = c("hold_position", "scale_down"))
+}
+```
+
+The frequentist comparison serves to validate Bayesian coefficient signs and
+magnitudes. Agreement strengthens confidence in the findings.
+
+
+# Sensitivity Analyses
+
+```{r sensitivity-table}
+sens_path <- file.path(TABLES_DIR, "sensitivity_summary.csv")
+if (file.exists(sens_path)) {
+  sens <- read.csv(sens_path)
+  kable(sens, caption = "Summary of sensitivity analyses", booktabs = TRUE) %>%
+    kable_styling(latex_options = c("hold_position", "scale_down"))
+}
+```
+
+Five sensitivity analyses test robustness to:
+
+1. Cohort threshold (cohort > 0 vs. cohort >= 50)
+2. TB-HIV covariate inclusion
+3. Overdispersion prior ($\phi$)
+4. Country RE prior ($\sigma_u$)
+5. Post-2021 definitions only
+
+
+# Discussion
+
+## Research Question Answer
+
+*[To be completed when Bayesian posteriors are available]*
+
+## Preferred Model Rationale
+
+*[To be completed when Bayesian posteriors are available]*
+
+## Limitations
+
+1. **Ecological fallacy:** Country-level data cannot support individual-level
+   causal claims.
+
+2. **Reporting heterogeneity:** Countries differ in data quality, surveillance
+   capacity, and conventions.
+
+3. **Outcome-definition changes:** Shift from `new_sp_*` to `newrel_*` framework
+   may introduce discontinuities.
+
+4. **Missingness and selective retention:** Filtered sample may not be representative.
+
+5. **Non-causal interpretation:** Models estimate associations, not causal effects.
+
+
+# Conclusion
+
+*[To be completed when Bayesian posteriors are available]*
+
+This project developed a fully Bayesian comparison of three models for TB treatment
+success. Based on DIC and posterior predictive checks, *[model recommendation]*.
+
+
+# Reproducibility Appendix
+
+## Software Versions
+
+```{r session-info}
+sessionInfo()
+```
+
+## Data Provenance
+
+- Source: World Health Organization Global TB Programme
+- Files downloaded: 2026-04-04
+- Analysis window: 2012-2023
+- Final sample: 1,862 country-years, 180 countries
+
+
+## File Structure
+
+- Main analysis script: `src/main.R`
+- JAGS model files: `src/models/*.jags`
+- Output tables: `src/outputs/tables/`
+- Output figures: `src/outputs/figures/`
+
+
+# References
+

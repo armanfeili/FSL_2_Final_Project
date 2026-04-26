@@ -3,7 +3,7 @@
 ## Fully Bayesian MCMC Analysis of WHO Data, 2012–2023
 
 > **Course:** Fundamentals of Statistical Learning II — M.Sc. in Data Science, a.y. 2025–2026
-> **Last updated:** 2026-04-19
+> **Last updated:** 2026-04-26
 > **Note:** This is an individual final project. It is submitted as a written report and then discussed orally.
 
 ---
@@ -698,7 +698,7 @@ The following safeguards must be maintained throughout the project:
 # PHASE 11 — Parameter Recovery Simulation
 
 > **Goal:** Verify that the Bayesian procedure can reliably recover true parameter values under the assumed data-generating mechanism. This phase directly addresses the course guideline: "check the ability of a fully Bayesian analysis to recover model parameters with data simulated from the model."
-> **Execution status (2026-04-18):** `[ ]` — blocked until final model fit settings are frozen after Phase 8.
+> **Execution status (2026-04-26):** `[/]` IN PROGRESS — full recovery run active (`src/scripts/run_phase11_full.R`); M1 reached 30/30 and M2 started; final phase completion requires M1+M2+M3 recovery outputs and postprocessing summaries.
 
 ### Step 11.1 — Design the recovery simulation
 
@@ -709,26 +709,26 @@ The following safeguards must be maintained throughout the project:
 
 ### Step 11.2 — Simulate datasets and refit
 
-- [x] Generate synthetic datasets (only Y regenerated; design held fixed).
-- [x] Refit each model to its own simulated data.
-- [x] Save posterior summaries and convergence diagnostics for each replicate.
-- [x] Log runtime and timestamp for simulation loops.
+- [/] Generate synthetic datasets (only Y regenerated; design held fixed).
+- [/] Refit each model to its own simulated data.
+- [/] Save posterior summaries and convergence diagnostics for each replicate.
+- [/] Log runtime and timestamp for simulation loops.
 
 ### Step 11.3 — Handle convergence failures
 
-- [x] Store convergence diagnostics (R-hat, ESS) for each refit.
+- [/] Store convergence diagnostics (R-hat, ESS) for each refit.
 - [x] Define what counts as a failed replicate (e.g., R-hat > 1.10 for key parameters, or ESS < 100).
-- [x] Report the number of failed replicates transparently.
-- [x] Exclude failed replicates only with explicit justification — never silently.
+- [/] Report the number of failed replicates transparently.
+- [/] Exclude failed replicates only with explicit justification — never silently.
 
 ### Step 11.4 — Evaluate recovery performance
 
-- [x] Compute: bias, RMSE, 95% equal-tail credible interval coverage, 95% HPD coverage (if feasible).
-- [x] Pay special attention to phi and sigma_u.
+- [/] Compute: bias, RMSE, 95% equal-tail credible interval coverage, 95% HPD coverage (if feasible).
+- [/] Pay special attention to phi and sigma_u.
 
 ### Step 11.5 — Write recovery interpretation
 
-- [x] Which parameters recovered well? Which are difficult? Is coverage acceptable? Is sigma_u identifiable enough?
+- [ ] Which parameters recovered well? Which are difficult? Is coverage acceptable? Is sigma_u identifiable enough?
 
 **Deliverables:** Recovery summary tables in `src/outputs/tables/` + plots in `src/outputs/figures/`; simulation replicates in `src/outputs/simulations/`; interpretation note.
 **Done-when:** Recovery study demonstrates inferential credibility for all three models.
@@ -784,7 +784,7 @@ The following safeguards must be maintained throughout the project:
 
 - [x] Fit M1 frequentist: Binomial GLM
 - [x] Fit M2 frequentist: Beta-binomial regression (VGAM::vglm preferred, aod::betabin alternative, quasibinomial fallback)
-- [x] Fit M3 frequentist: Mixed-effects logistic GLMM
+- [/] Fit M3 frequentist: Mixed-effects logistic GLMM *(failed in dispatcher: `function 'cholmod_factor_ldetA' not provided by package 'Matrix'`)*
 
 | Bayesian | Frequentist | R Code |
 |----------|-------------|--------|
@@ -808,7 +808,7 @@ The following safeguards must be maintained throughout the project:
 
 **Deliverables:** Frequentist model objects; comparison table.
 **Done-when:** Section is concise but methodologically clean.
-**Status:** `[/]` Frequentist side implemented. Bayesian-vs-frequentist side-by-side comparison still pending full Bayesian outputs from Phase 8.
+**Status:** `[/]` PARTIAL — M1 GLM and M2 VGAM fitted (`freq_m1_glm.rds`, `freq_m2_vgam.rds`), comparison tables exported, but M3 GLMM failed due local Matrix/lme4 binary issue (`cholmod_factor_ldetA` missing).
 
 ---
 
@@ -831,12 +831,12 @@ The following safeguards must be maintained throughout the project:
 ### Step 14.3 — Sensitivity: phi prior
 
 - [x] Try alternative: phi ~ Gamma(1, 0.1) or log(phi) ~ N(0, 2²). *(Alternative JAGS model created)*
-- [/] Compare posterior and model ranking changes. *(BLOCKED: requires JAGS)*
+- [ ] Compare posterior and model ranking changes. *(NOT RUN: dispatcher only wrote prior-spec table and logged "would fit alternative phi model here")*
 
 ### Step 14.4 — Sensitivity: sigma_u prior
 
 - [x] Try alternative: sigma_u ~ Half-Normal(0, 2.5) or Half-t(3, 0, 1). *(Alternative JAGS model created)*
-- [/] Compare changes. *(BLOCKED: requires JAGS)*
+- [ ] Compare changes. *(NOT RUN: dispatcher only wrote prior-spec table and logged "would fit alternative sigma_u model here")*
 
 ### Step 14.5 — Sensitivity: Post-2021 stricter definitions
 
@@ -846,7 +846,7 @@ The following safeguards must be maintained throughout the project:
 
 **Deliverables:** Five sensitivity tables; summary note.
 **Done-when:** Main conclusions survive (or transparently fail) under alternative choices.
-**Status:** ✅ PARTIAL — Frequentist analyses complete for 14.1, 14.2, 14.5. Prior sensitivities (14.3, 14.4) require JAGS for full Bayesian comparison.
+**Status:** ✅ PARTIAL — Frequentist analyses complete for 14.1, 14.2, 14.5. For 14.3/14.4, only prior-spec tables and alt JAGS files were generated; Bayesian posterior sensitivity fits are still pending.
 
 ---
 
@@ -940,7 +940,7 @@ Follow this structure (mirrors course requirements):
 
 **Deliverables:** Full draft report (PDF in `src/report/`); appendix materials.
 **Done-when:** All analysis is written in narrative form, not just coded.
-**Status:** ✅ COMPLETE — Report template, discussion content, conclusion content, and all support files generated. Full Bayesian results sections have placeholders awaiting Phase 8 posteriors.
+**Status:** `[/]` PARTIAL — report scaffolding files generated (`src/report/report.Rmd`, `discussion_content.md`, `conclusion_content.md`, `references.bib`), but `report.Rmd` still contains stale placeholders and is not final.
 
 ---
 
@@ -1001,7 +1001,7 @@ Follow this structure (mirrors course requirements):
 
 **Deliverables:** Submission-ready archive; oral discussion notes or slides.
 **Done-when:** A reviewer can open the project and understand exactly what was submitted.
-**Status:** ✅ COMPLETE — Consistency checks, reproducibility verification, submission checklist, and oral discussion notes generated. Full report PDF pending Phases 8-12 completion.
+**Status:** `[/]` PARTIAL — Targeted rerun of Phase 17 now completes including oral notes + Q&A outputs; remaining submission gap is final report PDF.
 
 ---
 
@@ -1027,12 +1027,12 @@ Follow this structure (mirrors course requirements):
 - [/] Parameter recovery study completed *(pending — unblocked now that M3 has passed)*
 
 ### Extensions ✓
-- [x] Frequentist comparison completed
-- [x] All 5 sensitivity analyses completed
+- [/] Frequentist comparison completed *(M3 frequentist analogue pending/failed)*
+- [/] All 5 sensitivity analyses completed *(14.3/14.4 Bayesian fits pending)*
 - [x] Appendix materials compiled
 
 ### Report ✓
-- [x] Report fully drafted (all 20+ sections) *(template ready; Bayesian sections have placeholders)*
+- [/] Report fully drafted (all 20+ sections) *(template present; final values/placeholders still pending)*
 - [x] Tables polished
 - [x] Figures polished
 - [x] Discussion written (with all 5 limitations)
@@ -1044,7 +1044,7 @@ Follow this structure (mirrors course requirements):
 - [x] README included
 - [x] Decision log complete
 - [x] Oral notes prepared
-- [x] Dry run completed *(verification checks automated)*
+- [/] Dry run completed *(dispatcher halted in Phase 17.4 before clean completion)*
 - [/] Final PDF exported *(compile when Bayesian posteriors available)*
 
 ---
