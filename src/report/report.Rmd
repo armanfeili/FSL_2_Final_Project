@@ -6,11 +6,11 @@ date: "`r format(Sys.Date(), '%Y-%m-%d')`"
 output:
   html_document:
     toc: true
-    toc_depth: 3
+    toc_depth: 1
     toc_float:
-      collapsed: false
+      collapsed: true
       smooth_scroll: true
-    number_sections: true
+    number_sections: false
     theme: cosmo
     highlight: tango
     df_print: paged
@@ -49,7 +49,7 @@ html_table <- function(x, caption = NULL, digits = 3) {
     format = "html",
     caption = caption,
     digits = digits,
-    escape = FALSE
+    escape = TRUE
   ) |>
     kableExtra::kable_styling(
       bootstrap_options = c("striped", "hover", "condensed", "responsive"),
@@ -359,7 +359,9 @@ hr {
 })();
 </script>
 
-# Abstract
+# Overview
+
+## Abstract
 
 **Background:** Tuberculosis (TB) remains a major global health challenge. WHO
 reports country-level treatment success rates annually, but the statistical
@@ -373,8 +375,12 @@ model, or a hierarchical beta-binomial model.
 country-years across 180 countries. Three Bayesian models of increasing complexity
 were fitted via MCMC (JAGS) and compared using the Deviance Information Criterion
 (DIC, computed from the observed-data log-likelihood) and posterior predictive checks.
-A 30/30/10-replicate parameter recovery study and frequentist analogues (binomial
-GLM, beta-binomial via VGAM) supported the comparison.
+A reduced-design 30/30/10-replicate parameter recovery study supported inferential
+calibration. Frequentist analogues were completed for M1 (binomial GLM) and M2
+(beta-binomial via VGAM), while the M3 frequentist GLMM failed locally due to a
+Matrix/lme4 binary incompatibility. Sensitivity material combined three executed
+frequentist checks with two Bayesian prior-sensitivity specifications that were
+prepared but not fully refitted.
 
 **Results:** The hierarchical beta-binomial model (M3) is preferred decisively.
 DIC is 24,940 for M3 versus 27,160 for M2 ($\Delta$DIC = 2,220) and 2,666,301 for
@@ -392,39 +398,42 @@ variance (p = 0.04), while M1 fails all variance-based checks (p = 0).
 **Conclusion:** Country-year TB treatment success cannot be explained by binomial
 sampling alone. Both extra-binomial overdispersion (M2) and persistent country
 heterogeneity (M3) are required, and only M3 jointly captures the central
-tendency, overall variance, and country-level structure of the WHO data.
+tendency, overall variance, and country-level structure of the WHO data,
+although residual lower-tail and within-region variance miscalibration remains.
 
 **Keywords:** Tuberculosis, Bayesian inference, beta-binomial, overdispersion,
 hierarchical model, MCMC, DIC
 
-> **Executive summary.** The hierarchical beta-binomial model is the preferred model. The binomial model severely underestimates variability, the beta-binomial improves overdispersion, and the hierarchical beta-binomial adds persistent country-level heterogeneity. The preferred model has the lowest observed-data DIC and the best posterior predictive behavior, although residual lower-tail miscalibration remains.
+> **Executive summary.** The hierarchical beta-binomial model is the preferred model. The binomial model severely underestimates variability, the beta-binomial improves overdispersion, and the hierarchical beta-binomial adds persistent country-level heterogeneity. The preferred model has the lowest observed-data DIC and the best posterior predictive behavior, although residual lower-tail and within-region variance miscalibration remains.
 
 ---
 
-# Navigation Guide
+## Navigation Guide
 
-This HTML report is organized as a reproducible Bayesian workflow:
+This report is organized into eight major sections:
 
-- **Sections 3–5:** data construction, filtering, and exploratory analysis.
-- **Sections 6–9:** model definitions and prior specification.
-- **Sections 10–12:** MCMC implementation, diagnostics, and parameter recovery.
-- **Sections 13–15:** posterior inference, posterior predictive checks, and DIC comparison.
-- **Sections 16–17:** bonus frequentist comparison and sensitivity analyses.
-- **Sections 18–21:** discussion, conclusion, course-requirement mapping, and reproducibility.
+1. Overview
+2. Data and EDA
+3. Models and Priors
+4. Computation and Recovery
+5. Results and Model Checking
+6. Robustness Checks
+7. Discussion
+8. Reproducibility
 
 ---
 
 
-# Introduction & Research Gap
+## Introduction
 
-## Background
+### Background
 
 Tuberculosis (TB) remains one of the leading causes of death from a single
 infectious agent worldwide. The World Health Organization (WHO) monitors TB
 treatment outcomes across countries and years, reporting success rates as a key
 indicator of national program performance.
 
-## Research Gap
+### Research Gap
 
 While WHO provides descriptive indicators, a formal Bayesian comparison of
 alternative uncertainty structures for treatment success remains unaddressed.
@@ -434,7 +443,15 @@ The central inferential question is:
 > explained by simple sampling variability, or do we need overdispersion and
 > hierarchical country effects to model them realistically?
 
-## Research Question
+## Objective and Research Question
+
+### Objective
+
+The objective is to identify the model that best explains and predicts
+country-year TB treatment success while keeping interpretation transparent for
+policy-oriented readers.
+
+### Research Question
 
 **Which Bayesian model best explains and predicts country-year TB treatment
 success in 2012-2023: a binomial logistic model, a beta-binomial model, or a
@@ -442,14 +459,16 @@ hierarchical beta-binomial model?**
 
 This question is:
 
-- **Sharp:** It targets a specific comparison among well-defined models
-- **Measurable:** It is directly answerable via DIC and posterior predictive checks
-- **Aligned:** All three models are fit to the same cleaned dataset
+- **Sharp:** It targets a specific comparison among well-defined models.
+- **Measurable:** It is directly answerable via DIC and posterior predictive checks.
+- **Aligned:** All three models are fit to the same cleaned dataset.
 
 
-# Dataset & Analysis Goals
+# Data and EDA
 
-## Data Sources
+## Dataset Overview
+
+### Data Sources
 
 ```{r data-sources, results="asis"}
 data_sources <- data.frame(
@@ -463,11 +482,11 @@ data_sources <- data.frame(
 html_table(data_sources, caption = "Data source files from WHO")
 ```
 
-## Unit of Analysis
+### Unit of Analysis
 
 One row = one country-year. The composite key is (iso3, year).
 
-## Analysis Goals
+### Analysis Goals
 
 1. Compare three Bayesian models using DIC and posterior predictive checks
 2. Assess whether binomial variance is adequate or overdispersion is required
@@ -476,9 +495,9 @@ One row = one country-year. The composite key is (iso3, year).
 ---
 
 
-# Data Construction & Cleaning
+## Data Preparation
 
-## Filtering Pipeline
+### Filtering Pipeline
 
 ```{r attrition-table}
 attrition_path <- file.path(TABLES_DIR, "attrition_table.csv")
@@ -488,7 +507,7 @@ if (file.exists(attrition_path)) {
 }
 ```
 
-## Final Sample
+### Final Sample
 
 ```{r final-sample}
 snapshot_path <- file.path(TABLES_DIR, "final_sample_snapshot.csv")
@@ -498,7 +517,50 @@ if (file.exists(snapshot_path)) {
 }
 ```
 
-## Attrition Flow
+### Predictor Screening and Collinearity
+
+```{r predictor-screening, results="asis"}
+corr_path <- file.path(TABLES_DIR, "predictor_correlations.csv")
+vif_path <- file.path(TABLES_DIR, "predictor_vif.csv")
+
+max_abs_corr <- NA_real_
+max_vif <- NA_real_
+
+if (file.exists(corr_path)) {
+  corr <- read.csv(corr_path, stringsAsFactors = FALSE)
+  html_table(corr, caption = "Pairwise correlations among continuous predictors", digits = 3)
+
+  corr_num <- suppressWarnings(as.numeric(corr$abs_correlation))
+  if (length(corr_num) && any(is.finite(corr_num))) {
+    max_abs_corr <- max(corr_num, na.rm = TRUE)
+  }
+}
+
+if (file.exists(vif_path)) {
+  vif <- read.csv(vif_path, stringsAsFactors = FALSE)
+  html_table(vif, caption = "VIF-style collinearity diagnostics", digits = 3)
+
+  vif_num <- suppressWarnings(as.numeric(vif$VIF))
+  if (length(vif_num) && any(is.finite(vif_num))) {
+    max_vif <- max(vif_num, na.rm = TRUE)
+  }
+}
+
+corr_fig_path <- file.path(FIGURES_DIR, "predictor_correlation_matrix.png")
+if (file.exists(corr_fig_path)) knitr::include_graphics(corr_fig_path)
+```
+
+*Figure: Correlation matrix of standardized continuous predictors used in the primary Bayesian models.*
+
+The main continuous predictors were screened for collinearity before fitting the
+Bayesian models. The largest pairwise correlation is between incidence and
+mortality. In the current diagnostics, max $|r|$ is `r ifelse(is.finite(max_abs_corr), sprintf('%.3f', max_abs_corr), 'not available')`,
+and max VIF is `r ifelse(is.finite(max_vif), sprintf('%.2f', max_vif), 'not available')`.
+Both remain below the pre-specified exclusion threshold and below the common VIF
+warning level of 5, so year, incidence, mortality, and case detection were
+retained together in all three primary Bayesian models.
+
+### Attrition Flow
 
 ```{r attrition-flow}
 attrition_fig <- file.path(FIGURES_DIR, "attrition_flow.png")
@@ -507,47 +569,91 @@ if (file.exists(attrition_fig)) knitr::include_graphics(attrition_fig)
 
 *Figure: Attrition flow through filtering pipeline.*
 
+Interpretation: This flow summarizes how the merged raw dataset is reduced by
+pre-specified eligibility and quality filters into the locked analytic sample
+used for all primary Bayesian models.
+
+### Stepwise Sample Retention Across Filtering Stages
+
+```{r attrition-waterfall}
+retention_fig <- file.path(FIGURES_DIR, "attrition_waterfall.png")
+if (file.exists(retention_fig)) knitr::include_graphics(retention_fig)
+```
+
+*Figure: Remaining country-years after each preprocessing step.*
+
+Interpretation: This step-count view shows where the largest sample reductions
+occur and confirms that the final analysis uses a transparent, reproducible,
+locked subset of the original merged panel.
+
+### Region-Year Coverage After Filtering
+
+```{r region-year-retention-heatmap}
+retention_heatmap <- file.path(FIGURES_DIR, "region_year_retention_heatmap.png")
+if (file.exists(retention_heatmap)) knitr::include_graphics(retention_heatmap)
+```
+
+*Figure: Retained country-year counts by WHO region and year after preprocessing.*
+
+Interpretation: Despite filtering, the final sample still spans all WHO regions
+and the full 2012–2023 window, supporting region-aware temporal comparisons in
+the downstream Bayesian models.
+
 ---
 
 
-# Exploratory Analysis
+## Exploratory Analysis
 
-## Success Rate Distribution
+### Success-Rate Distribution by Region
 
 ```{r success-dist}
-fig_path <- file.path(FIGURES_DIR, "success_rate_distribution.png")
+fig_path <- file.path(FIGURES_DIR, "success_rate_by_region_density.png")
 if (file.exists(fig_path)) knitr::include_graphics(fig_path)
 ```
 
-*Figure: Distribution of country-year treatment success rates.*
+*Figure: Regional density distributions of country-year treatment success rates.*
 
-## Temporal Trends by Region
+Interpretation: Most country-years cluster at relatively high success rates,
+but there is clear between-region heterogeneity and a persistent lower tail,
+which motivates models that allow richer variance and country-level structure.
+
+### Temporal Trends by Region
 
 ```{r temporal-trends}
-fig_path <- file.path(FIGURES_DIR, "temporal_trend_by_region.png")
+fig_path <- file.path(FIGURES_DIR, "temporal_trend_faceted.png")
 if (file.exists(fig_path)) knitr::include_graphics(fig_path)
 ```
 
-*Figure: Temporal trends in treatment success by WHO region.*
+*Figure: Faceted temporal trends in treatment success by WHO region.*
 
-## Overdispersion Evidence
-
-```{r sd-ratio}
-fig_path <- file.path(FIGURES_DIR, "country_sd_ratio_distribution.png")
-if (file.exists(fig_path)) knitr::include_graphics(fig_path)
-```
-
-*Figure: Distribution of SD ratios (observed/expected binomial).*
-
-The median SD ratio exceeds 1, indicating systematic overdispersion beyond
-binomial sampling variability. This motivates the beta-binomial extension.
+Interpretation: Regional trajectories are not identical over time. Some regions
+show stable high performance, while others show slower improvement and wider
+dispersion, motivating region adjustment and country-level heterogeneity.
 
 ---
 
 
-# Model 1 — Binomial Logistic Baseline
+# Models and Priors
 
-## Specification
+## Bayesian Modeling Roadmap
+
+The model sequence is intentionally incremental.
+
+| Model | Main idea | What it tests | Expected limitation |
+|---|---|---|---|
+| M1 (Binomial logistic) | Fixed effects with binomial sampling variation only | Whether ordinary binomial variability is enough for country-year TB success data | Typically underestimates variance when data are overdispersed |
+| M2 (Beta-binomial) | Adds overdispersion parameter $\phi$ | Whether extra-binomial variability materially improves calibration and fit | Does not explicitly model persistent country-specific heterogeneity |
+| M3 (Hierarchical beta-binomial) | Adds country random intercepts $u_i$ and SD $\sigma_u$ | Whether persistent country-level effects remain after covariate adjustment and overdispersion | More complex estimation; can still miss extreme lower-tail behavior |
+
+This table summarizes why the models are compared in this order and how each
+step adds one new component of data-generating realism.
+
+---
+
+
+## Model 1 — Binomial Logistic Baseline
+
+### Specification
 
 $$Y_{it} \sim \text{Binomial}(n_{it}, p_{it})$$
 
@@ -559,14 +665,21 @@ Where:
 - $\mathbf{x}_{it}$ = standardized predictors (year, incidence, mortality, case detection)
 - $\gamma_{r[i]}$ = WHO region fixed effects (baseline: AFR)
 
-## Purpose
+### Purpose
 
 M1 tests whether ordinary binomial variability is sufficient to explain the data.
 
+### In Simple Terms
 
-# Model 2 — Beta-Binomial Overdispersion Model
+Model 1 asks: "If every country-year followed the same basic success-rate
+equation and differences were only due to random binomial sampling, would that
+already be enough?" It is the simplest benchmark and the model we expect to
+fail first if real-world variability is richer.
 
-## Specification
+
+## Model 2 — Beta-Binomial Overdispersion Model
+
+### Specification
 
 $$Y_{it} \sim \text{Beta-Binomial}(n_{it}, \mu_{it}, \phi)$$
 
@@ -575,24 +688,31 @@ $$\text{logit}(\mu_{it}) = \beta_0 + \mathbf{x}_{it}^\top \boldsymbol{\beta} + \
 Where:
 - $\phi$ = overdispersion parameter
 
-$$
-\mathrm{Var}(Y_{it}) =
+\[
+\mathrm{Var}(Y_{it}\mid \mu_{it},\phi)
+=
 n_{it}\mu_{it}(1-\mu_{it})
-\frac{n_{it}+\phi}{1+\phi}
-$$
+\frac{n_{it}+\phi}{1+\phi}.
+\]
 
 Compared with the binomial variance, the beta-binomial inflates the variance by
-the factor $\frac{n_{it}+\phi}{1+\phi}$.
+the factor $(n_{it}+\phi)/(1+\phi)$.
 
-## Purpose
+### Purpose
 
 M2 tests whether extra-binomial dispersion (captured by $\phi$) improves fit.
 As $\phi \to \infty$, M2 reduces to M1.
 
+### In Simple Terms
 
-# Model 3 — Hierarchical Beta-Binomial Country-Effects Model
+Model 2 says: "Maybe countries are more variable than the binomial model
+allows." The parameter $\phi$ controls that extra variability. If M2 fits much
+better than M1, overdispersion is real and cannot be ignored.
 
-## Specification
+
+## Model 3 — Hierarchical Beta-Binomial Country-Effects Model
+
+### Specification
 
 $$Y_{it} \sim \text{Beta-Binomial}(n_{it}, \mu_{it}, \phi)$$
 
@@ -604,33 +724,32 @@ Where:
 - $u_i$ = country-specific random intercept
 - $\sigma_u$ = between-country standard deviation
 
-## Purpose
+### Purpose
 
 M3 tests whether persistent country heterogeneity (captured by $u_i$ and $\sigma_u$)
 remains after controlling for observed covariates and overdispersion.
 
+### In Simple Terms
+
+Model 3 says: "Even after controlling for measured predictors, countries may
+have stable, unmeasured differences in treatment performance." The random effect
+$u_i$ captures each country's persistent offset, and $\sigma_u$ summarizes how
+large those cross-country differences are overall.
+
 ---
 
 
-# Prior Specification
+## Prior Specification and Prior Predictive Checks
 
 ```{r prior-table}
 prior_path <- file.path(TABLES_DIR, "prior_specification.csv")
 if (file.exists(prior_path)) {
   priors <- read.csv(prior_path, stringsAsFactors = FALSE)
-  jags_col <- names(priors)[tolower(names(priors)) == "jags_syntax"]
-  if (length(jags_col) == 1) {
-    priors[[jags_col]] <- gsub(
-      "gamma\\[1\\]\\s*<-\\s*0",
-      "gamma[1] &lt;- 0",
-      priors[[jags_col]]
-    )
-  }
   html_table(priors, caption = "Prior distributions for all model parameters")
 }
 ```
 
-## Prior Predictive Checks
+### Prior Predictive Checks
 
 ```{r prior-predictive}
 fig_path <- file.path(FIGURES_DIR, "prior_predictive_combined.png")
@@ -645,7 +764,9 @@ success rate range without excessive concentration.
 ---
 
 
-# MCMC Implementation
+# Computation and Recovery
+
+## MCMC Implementation
 
 All three Bayesian models were fitted in JAGS (`rjags`) on the same locked
 1,862-row country-year dataset. Settings:
@@ -675,7 +796,7 @@ a dense `inprod()`. Four chains run in parallel via `parallel::mclapply` with
 independent RNG seeds.
 
 
-# MCMC Diagnostics
+## MCMC Diagnostics
 
 ```{r mcmc-diag-summary}
 diag_path <- file.path(TABLES_DIR, "mcmc_diagnostics_summary.csv")
@@ -685,6 +806,121 @@ if (file.exists(diag_path)) {
 }
 ```
 
+```{r compact-mcmc-summary, results="asis"}
+diag_file_candidates <- list(
+  M1 = c(
+    file.path(DIAGNOSTICS_DIR, "m1_extended_diagnostics_summary.csv"),
+    file.path(DIAGNOSTICS_DIR, "m1_diagnostics_summary.csv")
+  ),
+  M2 = c(
+    file.path(DIAGNOSTICS_DIR, "m2_extended_diagnostics_summary.csv"),
+    file.path(DIAGNOSTICS_DIR, "m2_diagnostics_summary.csv")
+  ),
+  M3 = c(
+    file.path(DIAGNOSTICS_DIR, "m3_regioncentered_full_diagnostics_summary.csv"),
+    file.path(DIAGNOSTICS_DIR, "m3_diagnostics_summary.csv")
+  )
+)
+
+read_first_existing <- function(paths) {
+  hit <- paths[file.exists(paths)][1]
+  if (is.na(hit)) return(NULL)
+  x <- read.csv(hit, stringsAsFactors = FALSE)
+  attr(x, "source_file") <- basename(hit)
+  x
+}
+
+extract_diag_summary <- function(model_name, paths) {
+  x <- read_first_existing(paths)
+  if (is.null(x)) {
+    return(data.frame(
+      Model = model_name,
+      Source = NA_character_,
+      Max_Rhat = NA_real_,
+      Min_ESS = NA_real_,
+      Status = "Missing diagnostics file",
+      stringsAsFactors = FALSE
+    ))
+  }
+
+  nms <- names(x)
+  lower <- tolower(nms)
+
+  param_col <- nms[grepl("^parameter$|^param$|name", lower)][1]
+  if (is.na(param_col)) {
+    return(data.frame(
+      Model = model_name,
+      Source = attr(x, "source_file"),
+      Max_Rhat = NA_real_,
+      Min_ESS = NA_real_,
+      Status = "CHECK",
+      stringsAsFactors = FALSE
+    ))
+  }
+
+  rhat_col <- nms[grepl("^rhat$|^r_hat$|^r\\.hat$", lower)][1]
+  if (is.na(rhat_col)) {
+    rhat_col <- nms[grepl("rhat|r_hat|r\\.hat", lower) & !grepl("flag", lower)][1]
+  }
+
+  ess_col <- nms[grepl("^ess$|^n_eff$|^neff$|^effective_sample_size$", lower)][1]
+  if (is.na(ess_col)) {
+    ess_col <- nms[grepl("ess|effective", lower) & !grepl("flag", lower)][1]
+  }
+
+  p <- as.character(x[[param_col]])
+  keep <- startsWith(p, "beta[") |
+    p %in% c("beta0", "beta_0", "phi", "sigma_u") |
+    grepl("^gamma\\[[2-9][0-9]*\\]$", p, perl = TRUE)
+
+  if ("nonvarying" %in% nms) {
+    nv <- as.logical(x[["nonvarying"]])
+    nv[is.na(nv)] <- FALSE
+    keep <- keep & !nv
+  }
+
+  xk <- x[keep, , drop = FALSE]
+
+  rhat_vals <- if (!is.na(rhat_col)) suppressWarnings(as.numeric(xk[[rhat_col]])) else numeric(0)
+  ess_vals <- if (!is.na(ess_col)) suppressWarnings(as.numeric(xk[[ess_col]])) else numeric(0)
+
+  rhat_vals <- rhat_vals[is.finite(rhat_vals)]
+  ess_vals <- ess_vals[is.finite(ess_vals) & ess_vals > 0]
+
+  max_rhat <- if (length(rhat_vals)) max(rhat_vals, na.rm = TRUE) else NA_real_
+  min_ess <- if (length(ess_vals)) min(ess_vals, na.rm = TRUE) else NA_real_
+
+  status <- if (is.finite(max_rhat) && is.finite(min_ess) && max_rhat <= 1.05 && min_ess >= 400) {
+    "PASS"
+  } else {
+    "CHECK"
+  }
+
+  data.frame(
+    Model = model_name,
+    Source = attr(x, "source_file"),
+    Max_Rhat = max_rhat,
+    Min_ESS = min_ess,
+    Status = status,
+    stringsAsFactors = FALSE
+  )
+}
+
+diag_summary <- do.call(
+  rbind,
+  Map(extract_diag_summary, names(diag_file_candidates), diag_file_candidates)
+)
+rownames(diag_summary) <- NULL
+
+html_table(diag_summary, caption = "Compact MCMC diagnostics summary for accepted fits", digits = 3)
+```
+
+The compact diagnostics table reports the final promoted fit for each model.
+The primary acceptance rule was max R-hat $\leq$ 1.05 and min ESS $\geq$ 400 for
+key global parameters. M3 is the hardest model computationally, but the
+accepted region-centered non-centered fit satisfies the diagnostic threshold and
+is therefore used for posterior inference, PPC, and DIC.
+
 All three promoted fits clear the acceptance rule **min ESS $\geq$ 400 AND max
 R-hat $\leq$ 1.05** on key globals ($\beta_0, \beta_{1:4}, \gamma_{2:6}, \phi, \sigma_u$).
 M3 reaches min ESS = 407.1 and max R-hat = 1.0072 under the region-centered
@@ -692,16 +928,58 @@ parameterization. Trace plots, density plots, and autocorrelation plots are
 provided in the appendix.
 
 ```{r m3-trace}
-fig_path <- file.path(FIGURES_DIR, "m3_trace_density_core.png")
-if (file.exists(fig_path)) knitr::include_graphics(fig_path)
+fig_candidates <- c(
+  file.path(FIGURES_DIR, "m3_regioncentered_full_trace_density_core.png"),
+  file.path(FIGURES_DIR, "m3_trace_density_core.png")
+)
+hit <- fig_candidates[file.exists(fig_candidates)][1]
+if (!is.na(hit)) knitr::include_graphics(hit)
 ```
 
-*Figure: M3 trace and density plots for key globals (region-centered fit).*
+*Figure: Final accepted M3 trace and density diagnostics (region-centered non-centered fit).*
+
+Interpretation: Chains overlap well and explore the same posterior region
+without persistent drift. Together with ESS/R-hat thresholds, this supports
+using these draws for inference rather than treating them as preliminary.
+
+### Supplementary M1/M2 trace-density figures
+
+**M1 promoted fit**
+
+Preferred file: `m1_extended_trace_density_core.png` (fallback: `m1_trace_density_core.png`).
+
+```{r m1-supp-trace-density, results='asis'}
+m1_fig <- file.path(FIGURES_DIR, "m1_extended_trace_density_core.png")
+if (!file.exists(m1_fig)) {
+  m1_fig <- file.path(FIGURES_DIR, "m1_trace_density_core.png")
+}
+if (file.exists(m1_fig)) {
+  knitr::include_graphics(m1_fig)
+} else {
+  cat("Figure not found: m1_extended_trace_density_core.png (fallback: m1_trace_density_core.png)\n\n")
+}
+```
+
+**M2 promoted fit**
+
+Preferred file: `m2_extended_trace_density_core.png` (fallback: `m2_trace_density_core.png`).
+
+```{r m2-supp-trace-density, results='asis'}
+m2_fig <- file.path(FIGURES_DIR, "m2_extended_trace_density_core.png")
+if (!file.exists(m2_fig)) {
+  m2_fig <- file.path(FIGURES_DIR, "m2_trace_density_core.png")
+}
+if (file.exists(m2_fig)) {
+  knitr::include_graphics(m2_fig)
+} else {
+  cat("Figure not found: m2_extended_trace_density_core.png (fallback: m2_trace_density_core.png)\n\n")
+}
+```
 
 ---
 
 
-# Parameter Recovery
+## Parameter Recovery with Simulated Data
 
 The recovery study refits each model to data simulated from itself, holding the
 locked design ($n_{it}$, $X$, country and region IDs) fixed and regenerating only
@@ -716,16 +994,46 @@ if (file.exists(fail_path)) {
 ```
 
 The originally targeted design was 50 replicates × 3 models. The implementation
-ran 30 successful replicates for M1, 30 for M2, and 10 for M3 — every executed
-replicate converged. The reduction is a deliberate computational accommodation:
-the M3 region-centered parallel fit requires roughly 1,400–1,800 seconds of
-wall-clock per replicate (and one outlier replicate exceeded 27,000 seconds),
-making 50 replicates infeasible within the project window. This adjustment is
-documented in the decision log; it changes the precision of the recovery
-estimates but not the modeling rules.
+ran 30 successful replicates for M1, 30 for M2, and 10 for M3, with a 0% failure
+rate for executed replicates. This is a documented computational accommodation,
+not a methodological failure: M2/M3, especially M3, were substantially more
+expensive per replicate than M1, so the project used a reduced but completed
+design for feasible turnaround within the final run window.
+The 0% value refers specifically to the predefined execution/failure rule for
+recovery replicates.
 
-<details>
-<summary><strong>Show full recovery performance table</strong></summary>
+```{r recovery-executive-summary}
+fail_path <- file.path(TABLES_DIR, "recovery_failure_summary.csv")
+perf_path <- file.path(TABLES_DIR, "recovery_performance.csv")
+if (file.exists(fail_path) && file.exists(perf_path)) {
+  fail <- read.csv(fail_path, stringsAsFactors = FALSE)
+  perf <- read.csv(perf_path, stringsAsFactors = FALSE)
+
+  cov_by_model <- aggregate(coverage_95 ~ model, data = perf, FUN = mean)
+  names(cov_by_model)[2] <- "mean_coverage_95"
+
+  recov_summary <- merge(
+    fail[, c("model", "n_ok", "total_reps", "failure_rate")],
+    cov_by_model,
+    by = "model",
+    all.x = TRUE
+  )
+  recov_summary$executed <- paste0(recov_summary$n_ok, "/", recov_summary$total_reps)
+  recov_summary$failure_rate_pct <- sprintf("%.0f%%", 100 * recov_summary$failure_rate)
+
+  html_table(
+    recov_summary[, c("model", "executed", "failure_rate_pct", "mean_coverage_95")],
+    caption = "Executed recovery design summary",
+    digits = 3
+  )
+}
+```
+
+Interpretation: Recovery here is a calibration check. If true simulated values
+are repeatedly recovered with near-nominal coverage, then the inference pipeline
+is behaving credibly under known ground truth.
+
+### Full recovery performance table
 
 ```{r recovery-perf}
 perf_path <- file.path(TABLES_DIR, "recovery_performance.csv")
@@ -734,8 +1042,6 @@ if (file.exists(perf_path)) {
   html_table(perf, caption = "Recovery performance (bias, RMSE, 95\\% CI coverage)", digits = 4)
 }
 ```
-
-</details>
 
 ```{r recovery-coverage}
 fig_path <- file.path(FIGURES_DIR, "recovery_coverage_plot.png")
@@ -751,11 +1057,30 @@ and biases are small relative to the posterior SDs. M3 mixing on $\beta_0$ and
 $\gamma$ is intrinsically harder per replicate than in the main fit (each
 replicate has a freshly simulated $Y$); some replicate-level R-hats therefore
 exceed the main-fit threshold even though the recovery target is captured.
+Because only 10 M3 replicates were computationally feasible, precision for M3
+recovery summaries is lower than for M1/M2, but the overall calibration pattern
+remains supportive of inferential credibility.
+Some M3 parameter-level recovery diagnostics are weaker than the stricter
+main-fit thresholds, so the recovery results are interpreted as supportive
+calibration evidence rather than a stronger precision claim.
+
+Interpretation: Coverage near 0.95 across all models indicates that intervals
+are well calibrated on average, with M3 showing acceptable performance despite
+its higher computational complexity.
 
 ---
 
 
-# Posterior Inference
+**How to read posterior inference.** Coefficients are on the logit scale.
+Positive values imply higher predicted treatment success (all else equal),
+negative values imply lower predicted success. Credible intervals quantify
+posterior uncertainty around each effect. Directional probabilities such as
+`P > 0` or `P < 0` summarize posterior support for the effect direction.
+
+
+# Results and Model Checking
+
+## Posterior Inference
 
 ```{r posterior-m3}
 post_path <- file.path(TABLES_DIR, "posterior_summary_m3.csv")
@@ -764,6 +1089,10 @@ if (file.exists(post_path)) {
   html_table(post, caption = "M3 posterior summaries (preferred model)", digits = 3)
 }
 ```
+
+Interpretation: This table is the core inferential output for the preferred
+model. Signs, interval widths, and posterior tail probabilities should be read
+together rather than from point estimates alone.
 
 ```{r hyp-tests}
 hyp_path <- file.path(TABLES_DIR, "hypothesis_tests_summary.csv")
@@ -794,13 +1123,50 @@ if (file.exists(fig_path)) knitr::include_graphics(fig_path)
 
 *Figure: Country random-effect caterpillar plot (M3).*
 
+Interpretation: Countries with intervals clearly above zero are persistently
+high-performing relative to the adjusted global baseline, while those below zero
+are persistently low-performing. This is descriptive benchmarking, not a causal
+ranking.
 
-# Posterior Predictive Checks: Recovering Observed Data Features
+### Highest and Lowest Country Random Effects
 
-Detailed PPC quantities are provided below in an expandable table.
+**Top 10 positive and top 10 negative adjusted country random effects**
 
-<details>
-<summary><strong>Show full posterior predictive check table</strong></summary>
+```{r country-re-top-bottom, results="asis"}
+top_pos_path <- file.path(TABLES_DIR, "country_re_top10_positive.csv")
+top_neg_path <- file.path(TABLES_DIR, "country_re_top10_negative.csv")
+
+keep_cols <- c("iso3", "mean", "ci_lower", "ci_upper", "g_whoregion")
+
+if (file.exists(top_pos_path)) {
+  top_pos <- read.csv(top_pos_path, stringsAsFactors = FALSE)
+  cols <- intersect(keep_cols, names(top_pos))
+  if (length(cols)) top_pos <- top_pos[cols]
+  html_table(top_pos, caption = "Top 10 positive country random effects (M3)", digits = 3)
+}
+
+if (file.exists(top_neg_path)) {
+  top_neg <- read.csv(top_neg_path, stringsAsFactors = FALSE)
+  cols <- intersect(keep_cols, names(top_neg))
+  if (length(cols)) top_neg <- top_neg[cols]
+  html_table(top_neg, caption = "Top 10 negative country random effects (M3)", digits = 3)
+}
+```
+
+These tables summarize the strongest positive and negative country-level
+residual effects under M3. They should be read as descriptive adjusted country
+offsets, not causal rankings. Positive values indicate countries with
+persistently higher treatment success than expected after covariate and region
+adjustment; negative values indicate persistently lower adjusted performance.
+
+
+## Posterior Predictive Checks
+
+### Recovering Observed Data Features
+
+Detailed PPC quantities are provided below.
+
+### Full posterior predictive check table
 
 ```{r ppc-table}
 ppc_path <- file.path(TABLES_DIR, "ppc_summary_table.csv")
@@ -810,16 +1176,20 @@ if (file.exists(ppc_path)) {
 }
 ```
 
-</details>
+Interpretation: The PPC table is read by checking whether Bayesian p-values are
+close to 0.5 (well calibrated) or near 0/1 (systematic misfit). It complements
+parameter-level summaries by testing whether models reproduce data-level
+features we care about.
 
 The six posterior predictive test quantities give a clear picture. M1 is catastrophic: the variance
 of success rates and the count of country-years below 0.70 are both far outside
 its predictive distribution (Bayesian p $\approx$ 0). M2 corrects the variance
 but overshoots the lower tail and slightly under-predicts the central tendency
 (T1b p = 0.005). M3 calibrates the cohort-weighted mean (T1b p = 0.32) and
-approximately captures the variance (T2 p = 0.04), with residual misfit only in
-the lower tail (T3 p = 1.0). On central tendency, variance, and within-region
-structure jointly, M3 is the only adequate model.
+approximately captures the variance (T2 p = 0.04), but residual miscalibration
+remains in the lower tail (T3 p = 1.0) and within-region variance checks
+(T4a/T4b p-values also low). Overall, M3 is the best-performing model among the
+three candidates, not a perfect data-generating model.
 
 ```{r ppc-densities}
 fig_path <- file.path(FIGURES_DIR, "ppc_m3_density_overlay.png")
@@ -828,8 +1198,213 @@ if (file.exists(fig_path)) knitr::include_graphics(fig_path)
 
 *Figure: PPC density overlays for M3.*
 
+Interpretation: Under the preferred model, replicated datasets broadly recover
+the observed success-rate distribution shape, indicating improved global fit
+relative to simpler alternatives.
 
-# Model Comparison Using Observed-Data DIC
+```{r ppc-variance-model-compare}
+fig_path <- file.path(FIGURES_DIR, "ppc_model_comparison_variance.png")
+if (file.exists(fig_path)) knitr::include_graphics(fig_path)
+```
+
+*Figure: Posterior predictive comparison of variance recovery across M1, M2, and M3.*
+
+Interpretation: This figure visualizes the main PPC failure of M1: the binomial
+model cannot reproduce the observed variance. M2 and M3 are much closer, with
+M3 preferred overall because it also captures persistent country-level
+structure.
+
+```{r ppc-m3-cohort-calibration}
+fig_path <- file.path(FIGURES_DIR, "ppc_m3_cohort_calibration.png")
+if (file.exists(fig_path)) knitr::include_graphics(fig_path)
+```
+
+*Figure: M3 posterior predictive calibration across cohort-size strata.*
+
+Interpretation: Calibration is acceptable across cohort-size strata, indicating
+that the preferred model is not fitting only one cohort-size regime but tracks
+observed behavior across small and large cohorts.
+
+### Per-model PPC test-statistic visual diagnostics
+
+**M1 PPC test statistics**
+
+Source file: ppc_m1_test_statistics.png.
+
+```{r ppc-model-test-stats-m1, results='asis'}
+fp <- file.path(FIGURES_DIR, "ppc_m1_test_statistics.png")
+if (file.exists(fp)) {
+  knitr::include_graphics(fp)
+} else {
+  cat("Figure not found: ppc_m1_test_statistics.png\n\n")
+}
+```
+
+**M2 PPC test statistics**
+
+Source file: ppc_m2_test_statistics.png.
+
+```{r ppc-model-test-stats-m2, results='asis'}
+fp <- file.path(FIGURES_DIR, "ppc_m2_test_statistics.png")
+if (file.exists(fp)) {
+  knitr::include_graphics(fp)
+} else {
+  cat("Figure not found: ppc_m2_test_statistics.png\n\n")
+}
+```
+
+**M3 PPC test statistics**
+
+Source file: ppc_m3_test_statistics.png.
+
+```{r ppc-model-test-stats-m3, results='asis'}
+fp <- file.path(FIGURES_DIR, "ppc_m3_test_statistics.png")
+if (file.exists(fp)) {
+  knitr::include_graphics(fp)
+} else {
+  cat("Figure not found: ppc_m3_test_statistics.png\n\n")
+}
+```
+
+### Supplementary EDA and Diagnostic Visuals
+
+**Cohort distribution by region**
+
+Source file: cohort_distribution_by_region.png.
+
+```{r supp-cohort-distribution-by-region, results='asis'}
+fp <- file.path(FIGURES_DIR, "cohort_distribution_by_region.png")
+if (file.exists(fp)) {
+  knitr::include_graphics(fp)
+} else {
+  cat("Figure not found: cohort_distribution_by_region.png\n\n")
+}
+```
+
+*Caption: Regional cohort-size distributions for sample composition context.*
+
+**Bivariate plots (combined)**
+
+Source file: bivariate_plots_combined.png.
+
+```{r supp-bivariate-plots-combined, results='asis'}
+fp <- file.path(FIGURES_DIR, "bivariate_plots_combined.png")
+if (file.exists(fp)) {
+  knitr::include_graphics(fp)
+} else {
+  cat("Figure not found: bivariate_plots_combined.png\n\n")
+}
+```
+
+*Caption: Supplementary bivariate relationships among key predictors and outcomes.*
+
+**Region-year success heatmap**
+
+Source file: region_year_success_heatmap.png.
+
+```{r supp-region-year-success-heatmap, results='asis'}
+fp <- file.path(FIGURES_DIR, "region_year_success_heatmap.png")
+if (file.exists(fp)) {
+  knitr::include_graphics(fp)
+} else {
+  cat("Figure not found: region_year_success_heatmap.png\n\n")
+}
+```
+
+*Caption: Regional temporal structure in observed treatment success rates.*
+
+**Country SD ratio distribution**
+
+Source file: country_sd_ratio_distribution.png.
+
+```{r supp-country-sd-ratio-distribution, results='asis'}
+fp <- file.path(FIGURES_DIR, "country_sd_ratio_distribution.png")
+if (file.exists(fp)) {
+  knitr::include_graphics(fp)
+} else {
+  cat("Figure not found: country_sd_ratio_distribution.png\n\n")
+}
+```
+
+*Caption: Distribution of country-level variability relative to aggregate spread.*
+
+**M1 autocorrelation diagnostics**
+
+Source file: m1_autocorr_core.png.
+
+```{r supp-m1-autocorr-core, results='asis'}
+fp <- file.path(FIGURES_DIR, "m1_autocorr_core.png")
+if (file.exists(fp)) {
+  knitr::include_graphics(fp)
+} else {
+  cat("Figure not found: m1_autocorr_core.png\n\n")
+}
+```
+
+*Caption: Supplementary autocorrelation diagnostics for M1 chains.*
+
+**M2 autocorrelation diagnostics**
+
+Source file: m2_autocorr_core.png.
+
+```{r supp-m2-autocorr-core, results='asis'}
+fp <- file.path(FIGURES_DIR, "m2_autocorr_core.png")
+if (file.exists(fp)) {
+  knitr::include_graphics(fp)
+} else {
+  cat("Figure not found: m2_autocorr_core.png\n\n")
+}
+```
+
+*Caption: Supplementary autocorrelation diagnostics for M2 chains.*
+
+**M3 autocorrelation diagnostics (region-centered full)**
+
+Source file: m3_regioncentered_full_autocorr_core.png.
+
+```{r supp-m3-regioncentered-full-autocorr-core, results='asis'}
+fp <- file.path(FIGURES_DIR, "m3_regioncentered_full_autocorr_core.png")
+if (file.exists(fp)) {
+  knitr::include_graphics(fp)
+} else {
+  cat("Figure not found: m3_regioncentered_full_autocorr_core.png\n\n")
+}
+```
+
+*Caption: Supplementary autocorrelation diagnostics for the accepted M3 fit.*
+
+**M1 cohort calibration PPC**
+
+Source file: ppc_m1_cohort_calibration.png.
+
+```{r supp-ppc-m1-cohort-calibration, results='asis'}
+fp <- file.path(FIGURES_DIR, "ppc_m1_cohort_calibration.png")
+if (file.exists(fp)) {
+  knitr::include_graphics(fp)
+} else {
+  cat("Figure not found: ppc_m1_cohort_calibration.png\n\n")
+}
+```
+
+*Caption: Supplementary cohort-stratified PPC calibration for M1.*
+
+**M2 cohort calibration PPC**
+
+Source file: ppc_m2_cohort_calibration.png.
+
+```{r supp-ppc-m2-cohort-calibration, results='asis'}
+fp <- file.path(FIGURES_DIR, "ppc_m2_cohort_calibration.png")
+if (file.exists(fp)) {
+  knitr::include_graphics(fp)
+} else {
+  cat("Figure not found: ppc_m2_cohort_calibration.png\n\n")
+}
+```
+
+*Caption: Supplementary cohort-stratified PPC calibration for M2.*
+
+
+## Model Comparison Using Observed-Data DIC
 
 ```{r dic-table}
 dic_path <- file.path(TABLES_DIR, "dic_comparison_table.csv")
@@ -838,6 +1413,10 @@ if (file.exists(dic_path)) {
   html_table(dic, caption = "DIC comparison (observed-data log-likelihood)", digits = 2)
 }
 ```
+
+Interpretation: Lower DIC indicates better out-of-sample-leaning tradeoff
+between fit and effective complexity within this model set. Large $\Delta$DIC
+values imply the ranking is not a marginal tie.
 
 DIC strongly prefers M3 over M2 ($\Delta$DIC = 2,220) and both over M1
 ($\Delta$DIC vs M1 $\approx$ 2.6 million). Effective parameters $p_D \approx 178.7$
@@ -853,15 +1432,35 @@ directly comparable across models).
 | 5–10 | Moderate evidence |
 | < 5 | Interpret cautiously |
 
+
+## How to Read the Model Comparison
+
+Use this decision sequence:
+
+1. **Start with PPC calibration:** If a model cannot reproduce key observed
+  features (mean, variance, lower tail), do not treat it as adequate even if
+  some coefficients look significant.
+2. **Then check DIC gaps:** Use $\Delta$DIC to rank models among those that are
+  at least approximately calibrated.
+3. **Then read interpretability:** Prefer the model whose parameters map to
+  meaningful data-generating components (baseline effects, overdispersion,
+  persistent country heterogeneity).
+
+In this report, that sequence points to M3: best overall tradeoff among the
+compared models, lowest observed-data DIC, and interpretable overdispersion
+plus country-level structure, despite residual PPC miscalibration in the lower
+tail and within-region variance checks.
+
 ---
 
 
-# Frequentist Comparison
+# Robustness Checks
 
-Detailed coefficients are provided in the expandable table below.
+## Frequentist Comparison
 
-<details>
-<summary><strong>Show full Bayesian vs frequentist coefficient table</strong></summary>
+Selected coefficient alignments are shown below.
+
+### Selected Bayesian vs frequentist coefficient comparison
 
 ```{r frequentist-table}
 freq_path <- file.path(TABLES_DIR, "bayesian_vs_frequentist_comparison.csv")
@@ -871,66 +1470,88 @@ if (file.exists(freq_path)) {
 }
 ```
 
-</details>
+The full comparison CSV is available at `src/outputs/tables/bayesian_vs_frequentist_comparison.csv`.
 
 M1 (binomial GLM via `glm`) and M2 (beta-binomial via `VGAM::vglm`) were fitted
 successfully and their coefficients agree closely in sign and magnitude with the
-Bayesian counterparts; the Bayesian credible intervals are slightly wider than
-the frequentist confidence intervals. The M3 frequentist analogue (`lme4::glmer`
+Bayesian counterparts; interval widths are broadly comparable, with small
+differences depending on parameter and model. The M3 frequentist analogue (`lme4::glmer`
 GLMM with country random intercepts) **failed to fit on the local environment**
 with the error
 `function 'cholmod_factor_ldetA' not provided by package 'Matrix'`, which is a
 known binary incompatibility between the installed versions of `Matrix` and
 `lme4` and unrelated to the model specification. Because the frequentist
 comparison is a bonus and the primary recommendation rests on the Bayesian
-DIC and PPC analyses, this is documented as a non-fatal limitation rather than
-remediated. Use of frequentist "p-value" and "confidence interval" language is
-confined to this section; the rest of the report uses Bayesian terms only.
+DIC, PPC, posterior-inference, and diagnostics analyses, this is documented as a
+non-fatal limitation rather than remediated. Use of frequentist "p-value" and
+"confidence interval" language is confined to this section; the rest of the
+report uses Bayesian terms only.
 
 
-# Sensitivity Analyses
+## Sensitivity Analyses
 
 ```{r sensitivity-table}
 sens_path <- file.path(TABLES_DIR, "sensitivity_summary.csv")
 if (file.exists(sens_path)) {
-  sens <- read.csv(sens_path)
-  sens$status[sens$sensitivity == "14.3 phi prior (Gamma alternatives)"] <-
-    "SPECIFICATION ONLY - Bayesian refit not run"
-  sens$status[sens$sensitivity == "14.4 sigma_u prior (Half-Normal alternatives)"] <-
-    "SPECIFICATION ONLY - Bayesian refit not run"
+  sens <- read.csv(sens_path, stringsAsFactors = FALSE)
+
+  sens$sensitivity <- sub("^14\\.1", "S21.1", sens$sensitivity)
+  sens$sensitivity <- sub("^14\\.2", "S21.2", sens$sensitivity)
+  sens$sensitivity <- sub("^14\\.3", "S21.4", sens$sensitivity)
+  sens$sensitivity <- sub("^14\\.4", "S21.5", sens$sensitivity)
+  sens$sensitivity <- sub("^14\\.5", "S21.3", sens$sensitivity)
+
+  sens_214 <- grepl("^S21\\.4", sens$sensitivity) & grepl("phi", sens$sensitivity, ignore.case = TRUE)
+  sens_215 <- grepl("^S21\\.5", sens$sensitivity) & grepl("sigma", sens$sensitivity, ignore.case = TRUE)
+
+  sens$status[sens_214] <-
+   "SPECIFICATION ONLY - Bayesian refit not run"
+  sens$status[sens_215] <-
+   "SPECIFICATION ONLY - Bayesian refit not run"
+
+  sens <- sens[order(sens$sensitivity), ]
+  sens <- sens[, c("sensitivity", "status", "notes")]
+  rownames(sens) <- NULL
+  names(sens) <- c("Sensitivity arm", "Status", "Notes")
   html_table(sens, caption = "Summary of sensitivity analyses")
 }
 ```
 
-Five sensitivity analyses are specified:
+This sensitivity analysis includes five robustness arms with two execution levels.
 
-1. **Cohort threshold (14.1):** `cohort > 0` (no minimum) vs. main `cohort >= 50`.
-   Frequentist M1 refit. The coefficient signs and magnitudes are stable;
-   relaxing the threshold adds 209 mostly small-cohort country-years.
-2. **TB-HIV covariate (14.2):** Adding standardized `e_tbhiv_prct`. Frequentist
-   M1 refit. The TB-HIV coefficient is clearly negative (point estimate -0.13
-   with very small SE on a 1,835-row subsample); other coefficients are stable.
-3. **Overdispersion prior (14.3):** Alternative $\phi \sim \text{Gamma}(1, 0.1)$.
-   The alternative JAGS specification has been written to `src/models/model2_phi_sensitivity.jags`.
-   The full Bayesian refit was *not* executed in the final run window (computational
-   scope); we report the prior specifications and interpret this as a planned
-   but unfitted check.
-4. **Country-RE prior (14.4):** Alternative $\sigma_u \sim \text{Half-Normal}(0, 2.5)$.
-   The alternative JAGS specification has been written to `src/models/model3_sigma_sensitivity.jags`.
-   As with 14.3, the Bayesian refit was not executed in the final run window.
-5. **Post-2021 definitions (14.5):** 2020–2023 only with `used_2021_defs_flg == 1`.
-   Frequentist M1 refit. Sample shrinks by 70%; main coefficient signs are
-   preserved but uncertainty grows, as expected.
+1. **S21.1 Cohort threshold (executed):** `cohort > 0` vs. main `cohort >= 50`;
+  frequentist M1 refit with stable coefficient direction/magnitude.
+2. **S21.2 TB-HIV predictor (executed):** add standardized `e_tbhiv_prct`;
+  frequentist M1 refit with a negative TB-HIV coefficient and broadly stable
+  main effects on the reduced complete-case sample.
+3. **S21.3 Post-2021 definitions (executed):** 2020–2023 subset using
+  `used_2021_defs_flg == 1`; frequentist M1 refit with preserved main signs
+  and wider uncertainty due reduced sample size.
+4. **S21.4 Alternative $\phi$ prior (specification-only):** Bayesian prior arm
+  prepared through alternative JAGS specification, but full Bayesian refit not
+  included in the final computational run.
+5. **S21.5 Alternative $\sigma_u$ prior (specification-only):** Bayesian prior
+  arm prepared through alternative JAGS specification, but full Bayesian refit
+  not included in the final computational run.
+
+Three sensitivity checks were executed using frequentist analogues. Two
+additional Bayesian prior-sensitivity arms were specified through alternative
+JAGS model files, but full Bayesian refits were not executed in the final
+computational run. Therefore, these prior checks are reported as
+planned/specification-only rather than as completed Bayesian robustness
+evidence.
 
 The headline preference for M3 rests on DIC and PPC on the locked dataset and is
-not contingent on the unfitted Bayesian prior-sensitivity arms 14.3/14.4.
+not contingent on the unexecuted Bayesian prior-sensitivity arms S21.4/S21.5.
 
 ---
 
 
 # Discussion
 
-## Research Question Answer
+## Discussion
+
+### Research Question Answer
 
 The hierarchical beta-binomial model (M3) best explains and predicts country-year
 TB treatment success in 2012–2023. M1 fails: ordinary binomial sampling
@@ -939,16 +1560,19 @@ variability cannot remotely account for the observed cross-country dispersion
 improves substantially by adding extra-binomial overdispersion ($\phi$), but
 $\Delta$DIC vs M3 is still 2,220 — strong evidence — and M2 still misfits the
 cohort-weighted mean (p = 0.005) and over-predicts the lower tail. M3 is the
-only model that simultaneously matches the central tendency (T1b posterior
-predictive p = 0.32), approximately the variance (T2 p = 0.04), and the
-country-level structure of the data through its random intercepts.
+best overall model among the three candidates: it most successfully captures
+central tendency (T1b posterior predictive p = 0.32) and approximately recovers
+overall variance (T2 p = 0.04), while substantial residual structure is still
+handled through country random intercepts. PPCs nevertheless show remaining
+lower-tail and within-region variance miscalibration.
 
-## Preferred Model Rationale
+### Preferred Model Rationale
 
 The technical case for M3 has three legs. First, **DIC** is decisive ($\Delta$DIC
 > 10 is "strong evidence" by the standard convention; we observe $\Delta$DIC =
 2,220 vs M2). Second, **posterior predictive checks** independently corroborate
-the DIC ranking on every test quantity except the lower tail. Third, the
+the DIC ranking while still indicating residual lower-tail and within-region
+variance miscalibration. Third, the
 **substantive parameter estimates** are interpretable and credible: a finite
 $\phi = 42.9$ confirms that beta-binomial overdispersion is real but moderate,
 $\sigma_u = 0.72$ on the logit scale corresponds to substantial between-country
@@ -956,11 +1580,12 @@ spread, and the sign reversal of the incidence coefficient between M1 and M3 is
 a textbook illustration of why pooling matters in ecological data — once
 country effects are absorbed by $u_c$, the within-country incidence-success
 association is positive, plausibly because high-incidence countries tend to
-have mature, programmatically focused TB systems. The remaining lower-tail
-miscalibration in M3 (T3 p = 1.0) is the most natural target for a future
-heavy-tailed extension.
+have mature, programmatically focused TB systems. Remaining PPC miscalibration
+in M3 is visible in both lower-tail frequency (T3 p = 1.0) and within-region
+variance checks (low T4a/T4b p-values), making these natural targets for future
+model extension.
 
-## Limitations
+### Limitations
 
 1. **Ecological fallacy:** Country-level data cannot support individual-level
    causal claims.
@@ -976,7 +1601,7 @@ heavy-tailed extension.
 5. **Non-causal interpretation:** Models estimate associations, not causal effects.
 
 
-# Conclusion
+## Conclusion
 
 This project developed a fully Bayesian comparison of three models for WHO TB
 treatment success across 1,862 country-years (180 countries, 2012–2023). The
@@ -987,7 +1612,7 @@ still misses the central tendency and the lower tail; only the further addition
 of country-level random intercepts ($u_c$ with $\sigma_u \approx 0.72$ on the
 logit scale) provides the best overall fit across DIC, central tendency,
 variance, within-region heterogeneity, and country-level structure, although
-residual lower-tail miscalibration remains. Mortality
+residual lower-tail and within-region variance miscalibration remains. Mortality
 remains negatively associated with success after pooling; incidence reverses to
 a positive association once persistent country effects are absorbed; the
 intercept implies a baseline success probability around 0.85. The full Bayesian
@@ -997,36 +1622,46 @@ study — supports this recommendation. The frequentist comparison agrees on M1
 and M2 sign and magnitude; the M3 GLMM analogue could not be fitted on the
 local environment due to a Matrix/lme4 binary incompatibility, which we report
 honestly as a non-fatal limitation of the bonus comparison.
+Sensitivity evidence is supplementary: three executed frequentist checks and two
+Bayesian prior-sensitivity specifications without final-run Bayesian refits;
+the main conclusion does not depend on those unexecuted prior arms.
 
 ---
 
 
-# Course Requirements Traceability
+# Reproducibility
+
+## Course Requirements Traceability
 
 | Guideline requirement | Where addressed |
 |---|---|
 | Meaningful title | Title page |
-| Dataset and goals | Sections 3-4 |
-| Dataset description and at least two alternative models | Sections 3-8 |
-| Role of parameters and inferential goals | Sections 6-9 and 13 |
-| Parameter recovery with simulated data | Section 12 |
-| MCMC output illustration | Sections 10-11 |
-| Bayesian estimation / hypothesis testing / prediction | Sections 13-14 |
-| Model comparison through DIC | Section 15 |
-| Ability to recover observed-data features | Section 14 |
-| Bonus: model checking diagnostics | Sections 11 and 14 |
-| Bonus: frequentist comparison | Section 16 |
+| Dataset and goals | Sections 4-6 |
+| Dataset description and at least two alternative models | Sections 5 and 8-11 |
+| Role of parameters and inferential goals | Sections 8-12 and 16 |
+| Parameter recovery with simulated data | Section 15 |
+| MCMC output illustration | Sections 13-14 |
+| Bayesian estimation / hypothesis testing / prediction | Sections 16-17 |
+| Model comparison through DIC | Section 18 |
+| Ability to recover observed-data features | Section 17 |
+| Bonus: model checking diagnostics | Sections 14 and 17 |
+| Bonus: frequentist comparison | Section 20 (partial: M1/M2 completed, M3 GLMM failed locally) |
+| Sensitivity analyses (supplementary robustness) | Section 21 (partial: 3 frequentist checks executed; 2 Bayesian prior arms specification-only) |
+
+Note: Partial status in Sections 20-21 reflects executed versus
+specification-only supplementary work and does not change the primary Bayesian
+model recommendation.
 
 
-# Reproducibility Appendix
+## Reproducibility Appendix
 
-## Software Versions
+### Software Versions
 
 ```{r session-info}
 sessionInfo()
 ```
 
-## Data Provenance
+### Data Provenance
 
 - Source: World Health Organization Global TB Programme
 - Files downloaded: 2026-04-04
@@ -1034,32 +1669,80 @@ sessionInfo()
 - Final sample: 1,862 country-years, 180 countries
 
 
-## File Structure
+### File Structure
 
 - Main analysis script: `src/main.R`
 - JAGS model files: `src/models/*.jags`
 - Output tables: `src/outputs/tables/`
 - Output figures: `src/outputs/figures/`
 
-### How to regenerate the HTML report
+### How to regenerate the final HTML report
 
 The final HTML report is generated from:
 
-`src/report/report.Rmd`
+src/report/report.Rmd
 
-To regenerate:
+Command-line render:
 
-```r
-rmarkdown::render(
+<pre><code>Rscript -e "rmarkdown::render('src/report/report.Rmd', output_format = 'html_document', output_file = 'Arman_Feili_FSL2_Final_Report.html', output_dir = 'src/report')"</code></pre>
+<!-- Rscript -e "rmarkdown::render('src/report/report.Rmd', output_format = 'html_document', output_file = 'Arman_Feili_FSL2_Final_Report.html', output_dir = 'src/report')" -->
+
+R console render:
+
+<pre><code>rmarkdown::render(
   "src/report/report.Rmd",
   output_format = "html_document",
-  output_file = "report.html",
+  output_file = "Arman_Feili_FSL2_Final_Report.html",
   output_dir = "src/report"
-)
+)</code></pre>
+<!-- output_file = "Arman_Feili_FSL2_Final_Report.html" -->
+
+The full analysis source is src/main.R; JAGS model files are in src/models/.
+
+### Final Validation Checks
+
+These tables are reproducibility and submission-integrity checks, not
+statistical evidence. Final validation verifies consistency of year window,
+sample size, baseline region, predictor set, model numbering, and the
+observed-data DIC method. The submission checklist marks the final HTML report
+artifact as ready. The final written report artifact is
+`src/report/Arman_Feili_FSL2_Final_Report.html`; any legacy duplicate HTML file is
+not kept as a final artifact. The existing PDF export should be treated as
+secondary unless regenerated successfully from the final Rmd source.
+
+**Consistency, submission checklist, and version validation tables**
+
+```{r final-validation-checks, results="asis"}
+consistency_path <- file.path(TABLES_DIR, "consistency_check_results.csv")
+checklist_path <- file.path(TABLES_DIR, "submission_package_checklist.csv")
+version_path <- file.path(TABLES_DIR, "version_manifest.csv")
+
+if (file.exists(consistency_path)) {
+  consistency <- read.csv(consistency_path, stringsAsFactors = FALSE)
+  html_table(consistency, caption = "Final consistency check results")
+}
+
+if (file.exists(checklist_path)) {
+  checklist <- read.csv(checklist_path, stringsAsFactors = FALSE)
+
+  target_row <- checklist$item == "Final written report (HTML)"
+  if (any(target_row)) {
+    final_html_rel <- "src/report/Arman_Feili_FSL2_Final_Report.html"
+    final_html_abs <- file.path(PROJECT_ROOT, "report", "Arman_Feili_FSL2_Final_Report.html")
+    checklist$location[target_row] <- final_html_rel
+    checklist$exists[target_row] <- file.exists(final_html_abs)
+    checklist$status[target_row] <- ifelse(checklist$exists[target_row], "Ready", "Missing")
+  }
+
+  html_table(checklist, caption = "Submission package checklist")
+}
+
+if (file.exists(version_path)) {
+  version <- read.csv(version_path, stringsAsFactors = FALSE)
+  html_table(version, caption = "Version manifest for final environment")
+}
 ```
 
-The full analysis source is `src/main.R`; JAGS model files are in `src/models/`.
 
-
-# References
+## References
 
