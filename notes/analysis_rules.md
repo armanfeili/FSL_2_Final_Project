@@ -144,8 +144,58 @@ Countries with only one retained year after filtering are **retained** in the an
 
 ---
 
+## Implementation Note — Final Execution
+
+> The rules above are frozen as design rules. This section documents implementation
+> adjustments made during execution; it does not change any modeling rule.
+
+### Phase 11 — Reduced recovery design (computational scope)
+
+The originally targeted parameter recovery design was **50 replicates × 3 models**.
+The recovery design that was actually executed and is reported in the project is:
+
+| Model | Successful replicates | Originally planned |
+|-------|----------------------|--------------------|
+| M1    | 30 / 30              | 50                 |
+| M2    | 30 / 30              | 50                 |
+| M3    | 10 / 10              | 50                 |
+
+Every executed replicate converged. The reduction is a deliberate computational
+accommodation for M2/M3 — the M3 region-centered parallel fit costs roughly
+1,400–1,800 seconds of wall-clock per replicate with at least one observed
+outlier above 27,000 seconds, making 50 M3 replicates infeasible within the
+project window. The implementation is consistent with the modeling rules: same
+locked design, same predictor matrix, same priors, same MCMC settings shape;
+only the replicate count is reduced. The reduction is reported transparently in
+the recovery interpretation note and the decision log, and the effective
+coverage estimates at the executed replicate counts (M1 0.93, M2 0.96, M3 0.97)
+remain close to the nominal 95% target.
+
+### Phase 13 — Frequentist M3 GLMM unavailable on local environment
+
+`lme4::glmer` fails on the local environment with
+`function 'cholmod_factor_ldetA' not provided by package 'Matrix'`. This is a
+known binary incompatibility between the installed versions of `Matrix` and
+`lme4`, unrelated to model specification. M1 (binomial GLM) and M2
+(beta-binomial via `VGAM::vglm`) frequentist analogues are fitted and reported
+normally. The frequentist comparison is a course bonus, not a primary
+deliverable.
+
+### Phase 14 — Bayesian prior-sensitivity arms 14.3/14.4 are spec-only
+
+The alternative JAGS specifications (`model2_phi_sensitivity.jags`,
+`model3_sigma_sensitivity.jags`) and the prior-spec tables were generated, but
+the full Bayesian refits were *not* executed in the final run window
+(computational scope). These are reported as planned-but-unfitted prior
+sensitivity arms rather than completed Bayesian comparisons. The other three
+sensitivity arms (14.1 cohort threshold, 14.2 TB-HIV predictor, 14.5 post-2021
+definitions) are completed via frequentist refits.
+
+---
+
 ## Document History
 
 | Date | Action | Phase |
 |------|--------|-------|
 | 2026-04-18 | Initial creation | Phase 1 |
+| 2026-05-02 | Added implementation notes for Phase 11 reduced recovery design, Phase 13 M3 GLMM unavailability, and Phase 14 spec-only arms | Phase 17 finalization |

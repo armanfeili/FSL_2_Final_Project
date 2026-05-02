@@ -56,7 +56,7 @@ FSL_2_Final_Project/
 │   ├── scripts/                 # Optional helper utilities (not the execution path)
 │   ├── tests/
 │   │   └── test_smoke.py        # Smoke tests for project structure
-│   ├── report/                  # Final PDF report, .Rmd or .tex source
+│   ├── report/                  # Final HTML report and report source
 │   └── outputs/
 │       ├── figures/             # All plots (EDA, diagnostics, PPC, recovery)
 │       ├── tables/              # All CSV/LaTeX tables, version_manifest.csv, git_metadata.yaml
@@ -103,6 +103,24 @@ Requirements: R (≥ 4.x), JAGS (≥ 4.x), and the packages listed below. Output
 **Alternative methods:**
 - In RStudio: Open `src/main.R` and run Source
 - In R console: `source("src/main.R")`
+
+## Final Report
+
+Open:
+
+`src/report/Arman_Feili_FSL2_Final_Report.html`
+
+Primary final artifact:
+
+`src/report/report.html`
+
+To regenerate from R Markdown:
+
+```r
+rmarkdown::render("src/report/report.Rmd", output_format = "html_document", output_file = "report.html", output_dir = "src/report")
+```
+
+Note: `src/report/report.pdf` may exist as an optional legacy export, but HTML is the submission target.
 
 ---
 

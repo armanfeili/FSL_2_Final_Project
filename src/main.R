@@ -10486,17 +10486,18 @@ model {
   write.csv(sens_14_3_summary, file.path(TABLES_DIR, "sensitivity_14_3_phi_prior_specs.csv"), row.names = FALSE)
   cat("  ✓ Saved: sensitivity_14_3_phi_prior_specs.csv\n")
   
-  if (JAGS_AVAILABLE) {
-    cat("\n  JAGS available — would fit alternative phi model here.\n")
-    # TODO: Full MCMC fitting with alternative phi prior
-    # This is computationally expensive and would be done in Phase 8 extension
-    sensitivity_results[["sens_14_3"]] <- sens_14_3_summary
+  # Check whether actual Bayesian posterior was fit (not just specs)
+  sens_14_3_posterior_path <- file.path(MODEL_OBJECTS_DIR, "sens_14_3_phi_posterior.rds")
+  sens_14_3_fitted <- file.exists(sens_14_3_posterior_path)
+  if (sens_14_3_fitted) {
+    cat("\n  ✓ Bayesian posterior for alternative phi prior found.\n")
   } else {
-    cat("\n  ⚠️ JAGS not available. Alternative prior fitting BLOCKED.\n")
-    cat("  Prior specifications saved for when JAGS becomes available.\n")
-    PHASE_14_MESSAGES <- c(PHASE_14_MESSAGES, "JAGS unavailable for phi prior sensitivity")
-    sensitivity_results[["sens_14_3"]] <- sens_14_3_summary
+    cat("\n  Specs-only: alternative phi prior model file written; Bayesian refit not run.\n")
+    PHASE_14_MESSAGES <- c(PHASE_14_MESSAGES,
+      "Phase 14.3: alternative phi JAGS model specified; full Bayesian refit not run (computational scope)")
   }
+  attr(sens_14_3_summary, "fitted") <- sens_14_3_fitted
+  sensitivity_results[["sens_14_3"]] <- sens_14_3_summary
 }
 
 
@@ -10571,15 +10572,18 @@ model {
   write.csv(sens_14_4_summary, file.path(TABLES_DIR, "sensitivity_14_4_sigma_prior_specs.csv"), row.names = FALSE)
   cat("  ✓ Saved: sensitivity_14_4_sigma_prior_specs.csv\n")
   
-  if (JAGS_AVAILABLE) {
-    cat("\n  JAGS available — would fit alternative sigma_u model here.\n")
-    sensitivity_results[["sens_14_4"]] <- sens_14_4_summary
+  # Check whether actual Bayesian posterior was fit (not just specs)
+  sens_14_4_posterior_path <- file.path(MODEL_OBJECTS_DIR, "sens_14_4_sigma_posterior.rds")
+  sens_14_4_fitted <- file.exists(sens_14_4_posterior_path)
+  if (sens_14_4_fitted) {
+    cat("\n  ✓ Bayesian posterior for alternative sigma_u prior found.\n")
   } else {
-    cat("\n  ⚠️ JAGS not available. Alternative prior fitting BLOCKED.\n")
-    cat("  Prior specifications saved for when JAGS becomes available.\n")
-    PHASE_14_MESSAGES <- c(PHASE_14_MESSAGES, "JAGS unavailable for sigma_u prior sensitivity")
-    sensitivity_results[["sens_14_4"]] <- sens_14_4_summary
+    cat("\n  Specs-only: alternative sigma_u prior model file written; Bayesian refit not run.\n")
+    PHASE_14_MESSAGES <- c(PHASE_14_MESSAGES,
+      "Phase 14.4: alternative sigma_u JAGS model specified; full Bayesian refit not run (computational scope)")
   }
+  attr(sens_14_4_summary, "fitted") <- sens_14_4_fitted
+  sensitivity_results[["sens_14_4"]] <- sens_14_4_summary
 }
 
 
@@ -10728,10 +10732,14 @@ if (PHASE_14_STATUS == "IN_PROGRESS") {
     status = c(
       ifelse("sens_14_1" %in% names(sensitivity_results), "COMPLETE (frequentist)", "INCOMPLETE"),
       ifelse("sens_14_2" %in% names(sensitivity_results), "COMPLETE (frequentist)", "INCOMPLETE"),
-      ifelse("sens_14_3" %in% names(sensitivity_results), 
-             ifelse(JAGS_AVAILABLE, "COMPLETE", "PARTIAL (priors defined)"), "INCOMPLETE"),
-      ifelse("sens_14_4" %in% names(sensitivity_results), 
-             ifelse(JAGS_AVAILABLE, "COMPLETE", "PARTIAL (priors defined)"), "INCOMPLETE"),
+      ifelse("sens_14_3" %in% names(sensitivity_results),
+             ifelse(isTRUE(attr(sensitivity_results[["sens_14_3"]], "fitted")),
+                    "COMPLETE (Bayesian)", "PARTIAL (specs only; Bayesian refit not run)"),
+             "INCOMPLETE"),
+      ifelse("sens_14_4" %in% names(sensitivity_results),
+             ifelse(isTRUE(attr(sensitivity_results[["sens_14_4"]], "fitted")),
+                    "COMPLETE (Bayesian)", "PARTIAL (specs only; Bayesian refit not run)"),
+             "INCOMPLETE"),
       ifelse("sens_14_5" %in% names(sensitivity_results), "COMPLETE (frequentist)", "INCOMPLETE")
     ),
     notes = c(
@@ -10798,13 +10806,17 @@ if (PHASE_14_STATUS == "IN_PROGRESS") {
     "- Main: Gamma(2, 0.1) — Mean=20, moderately informative",
     "- Alternative: Gamma(1, 0.1) — Mean=10, more conservative",
     "- Assessment: Posterior change; model comparison impact",
-    sprintf("Status: %s", ifelse(JAGS_AVAILABLE, "COMPLETE", "BLOCKED (JAGS required)")),
+    sprintf("Status: %s", ifelse(isTRUE(attr(sensitivity_results[["sens_14_3"]], "fitted")),
+                                  "COMPLETE (Bayesian refit)",
+                                  "PARTIAL (alternative JAGS spec written; full Bayesian refit not run)")),
     "",
     "### 14.4 sigma_u Prior",
     "- Main: Half-Normal(0, 1)",
     "- Alternative: Half-Normal(0, 2.5) — wider",
     "- Assessment: Posterior change; shrinkage impact",
-    sprintf("Status: %s", ifelse(JAGS_AVAILABLE, "COMPLETE", "BLOCKED (JAGS required)")),
+    sprintf("Status: %s", ifelse(isTRUE(attr(sensitivity_results[["sens_14_4"]], "fitted")),
+                                  "COMPLETE (Bayesian refit)",
+                                  "PARTIAL (alternative JAGS spec written; full Bayesian refit not run)")),
     "",
     "### 14.5 Post-2021 Definitions",
     "- Main analysis: 2012-2023 with rel_with_new_flg == 1",
@@ -10839,14 +10851,18 @@ if (PHASE_14_STATUS == "IN_PROGRESS") {
   cat("  ✓ Saved: sensitivity_interpretation_notes.txt\n")
   
   # Determine final status
-  n_complete <- sum(sapply(c("sens_14_1", "sens_14_2", "sens_14_5"), 
+  n_complete <- sum(sapply(c("sens_14_1", "sens_14_2", "sens_14_5"),
                            function(x) x %in% names(sensitivity_results)))
-  n_partial <- sum(sapply(c("sens_14_3", "sens_14_4"), 
-                          function(x) x %in% names(sensitivity_results)))
-  
-  if (n_complete >= 3 && JAGS_AVAILABLE) {
+  n_specs_only <- sum(sapply(c("sens_14_3", "sens_14_4"),
+                             function(x) x %in% names(sensitivity_results) &&
+                                         !isTRUE(attr(sensitivity_results[[x]], "fitted"))))
+  n_bayes_fit <- sum(sapply(c("sens_14_3", "sens_14_4"),
+                            function(x) x %in% names(sensitivity_results) &&
+                                        isTRUE(attr(sensitivity_results[[x]], "fitted"))))
+
+  if (n_complete >= 3 && n_bayes_fit >= 2) {
     PHASE_14_STATUS <- "COMPLETE"
-  } else if (n_complete >= 2 || (n_complete >= 1 && n_partial >= 2)) {
+  } else if (n_complete >= 2) {
     PHASE_14_STATUS <- "PARTIAL"
   } else {
     PHASE_14_STATUS <- "BLOCKED"
@@ -10868,10 +10884,14 @@ cat(sprintf("Status: %s\n\n", PHASE_14_STATUS))
 cat("Sensitivity analyses:\n")
 cat(sprintf("  14.1 Cohort threshold:  %s\n", ifelse("sens_14_1" %in% names(sensitivity_results), "✓", "✗")))
 cat(sprintf("  14.2 TB-HIV predictor:  %s\n", ifelse("sens_14_2" %in% names(sensitivity_results), "✓", "✗")))
-cat(sprintf("  14.3 phi prior:         %s\n", ifelse("sens_14_3" %in% names(sensitivity_results), 
-                                                      ifelse(JAGS_AVAILABLE, "✓ (Bayesian)", "⚠ (specs only)"), "✗")))
-cat(sprintf("  14.4 sigma_u prior:     %s\n", ifelse("sens_14_4" %in% names(sensitivity_results), 
-                                                      ifelse(JAGS_AVAILABLE, "✓ (Bayesian)", "⚠ (specs only)"), "✗")))
+cat(sprintf("  14.3 phi prior:         %s\n", ifelse("sens_14_3" %in% names(sensitivity_results),
+                                                      ifelse(isTRUE(attr(sensitivity_results[["sens_14_3"]], "fitted")),
+                                                             "✓ (Bayesian refit)", "⚠ (specs only; refit not run)"),
+                                                      "✗")))
+cat(sprintf("  14.4 sigma_u prior:     %s\n", ifelse("sens_14_4" %in% names(sensitivity_results),
+                                                      ifelse(isTRUE(attr(sensitivity_results[["sens_14_4"]], "fitted")),
+                                                             "✓ (Bayesian refit)", "⚠ (specs only; refit not run)"),
+                                                      "✗")))
 cat(sprintf("  14.5 Post-2021 defs:    %s\n", ifelse("sens_14_5" %in% names(sensitivity_results), "✓", "✗")))
 
 cat("\nDeliverables:\n")
@@ -13074,7 +13094,7 @@ cat("17.3.1 - Submission Package Checklist\n")
 
 submission_items <- data.frame(
   item = c(
-    "Final written report (PDF)",
+    "Final written report (HTML)",
     "R Markdown source (report.Rmd)",
     "Main analysis script (main.R)",
     "JAGS model files (src/models/)",
@@ -13088,7 +13108,7 @@ submission_items <- data.frame(
     "README with instructions"
   ),
   location = c(
-    "src/report/report.pdf",
+    "src/report/report.html",
     "src/report/report.Rmd",
     "src/main.R",
     "src/models/*.jags",
@@ -13109,10 +13129,12 @@ submission_items <- data.frame(
 submission_items$exists <- sapply(1:nrow(submission_items), function(i) {
   loc <- submission_items$location[i]
   if (grepl("\\*", loc)) {
-    # Glob pattern
-    dir_path <- dirname(file.path(PROJECT_ROOT, gsub("\\*.*", "", loc)))
-    pattern <- basename(gsub("\\*", ".*", loc))
-    length(list.files(dir_path, pattern = pattern)) > 0
+    # Glob pattern: split into directory and filename pattern
+    dir_part <- sub("/[^/]*$", "", loc)
+    file_pat <- basename(loc)
+    full_dir <- file.path(PROJECT_ROOT, dir_part)
+    regex_pat <- utils::glob2rx(file_pat)
+    length(list.files(full_dir, pattern = regex_pat)) > 0
   } else if (grepl("/$", loc)) {
     # Directory
     dir.exists(file.path(PROJECT_ROOT, sub("/$", "", loc)))
@@ -13124,10 +13146,10 @@ submission_items$exists <- sapply(1:nrow(submission_items), function(i) {
 
 submission_items$status <- ifelse(submission_items$exists, "✓ Ready", "✗ Missing")
 
-# Special handling for PDF (may not exist yet)
-pdf_row <- which(submission_items$item == "Final written report (PDF)")
-if (!submission_items$exists[pdf_row]) {
-  submission_items$status[pdf_row] <- "⚠ Not yet compiled"
+# Special handling for HTML report (may not exist yet)
+html_row <- which(submission_items$item == "Final written report (HTML)")
+if (!submission_items$exists[html_row]) {
+  submission_items$status[html_row] <- "⚠ Not yet compiled"
 }
 
 cat("\nSubmission Package Status:\n")
@@ -13273,18 +13295,21 @@ oral_notes <- '# Oral Discussion Preparation Notes
 
 ## 4. Main Posterior Findings (3-4 min)
 
-[To be completed with actual posterior results when available]
+**M3 posterior summaries (preferred model):**
 
-**Expected findings to discuss:**
-- Intercept interpretation (baseline success rate on logit scale)
-- Effect directions: year (+?), incidence (-?), mortality (-?), CDR (+?)
-- Regional differences relative to AFR baseline
-- Overdispersion parameter phi (M2, M3)
-- Country RE SD sigma_u (M3)
+- Intercept beta0: posterior mean 1.768, 95% credible interval (1.702, 1.835)
+- Year_z: posterior mean -0.012, interval overlaps zero
+- Incidence_z: posterior mean +0.283, 95% credible interval (0.180, 0.385), P(beta_incidence > 0) = 1.000
+- Mortality_z: posterior mean -0.387, 95% credible interval (-0.473, -0.300), P(beta_mortality < 0) = 1.000
+- Case detection z: posterior mean +0.024, interval overlaps zero
+- Overdispersion phi: posterior mean 42.86, 95% credible interval (39.62, 46.26)
+- Country RE SD sigma_u: posterior mean 0.717, 95% credible interval (0.639, 0.804)
 
-**Key posterior probabilities:**
-- P(beta_incidence < 0): Evidence for negative incidence effect
-- P(sigma_u > 0.1): Evidence for meaningful country heterogeneity
+**Key interpretation points:**
+- M3 confirms substantial country-level heterogeneity (sigma_u clearly above zero)
+- Mortality burden is robustly negatively associated with treatment success
+- Incidence changes sign relative to M1 once persistent country effects are modeled
+- Finite phi indicates real extra-binomial overdispersion
 
 ---
 
@@ -13305,16 +13330,15 @@ oral_notes <- '# Oral Discussion Preparation Notes
 
 ## 6. Preferred Model & Why (2 min)
 
-[To be completed with actual DIC results when available]
+**DIC ranking (observed-data likelihood):**
+- M3: DIC 24940.1 (best)
+- M2: DIC 27160.5 (Delta-DIC about +2220 vs M3)
+- M1: DIC 2666301.2 (catastrophically worse)
 
-**Decision framework:**
-- DIC difference > 10: Strong evidence
-- DIC difference 5-10: Moderate evidence
-- DIC difference < 5: Interpret cautiously
-
-**Expected recommendation:**
-- If M3 has lowest DIC → "Hierarchical beta-binomial preferred; both overdispersion and country effects improve fit"
-- Also consider: posterior predictive performance, parameter interpretability
+**Recommendation:**
+- Preferred model: M3 hierarchical beta-binomial with country random effects
+- Rationale: strongest DIC, best joint PPC calibration, and substantively coherent partial pooling
+- M2 improves over M1 by modeling overdispersion, but still misses persistent country-level structure
 
 ---
 
@@ -13391,8 +13415,17 @@ A: It is only populated for 2020–2023. Using it as the main filter would colla
 
 # Save oral discussion notes
 oral_notes_path <- file.path(REPORT_DIR, "oral_discussion_notes.md")
-writeLines(oral_notes, oral_notes_path)
-cat(sprintf("  ✓ Oral discussion notes saved: %s\n\n", oral_notes_path))
+if (file.exists(oral_notes_path)) {
+  cat(sprintf("  ✓ Oral discussion notes preserved (already exists): %s\n\n", oral_notes_path))
+} else {
+  notes_footer <- paste0(
+    "\n\n*Notes generated: ",
+    format(Sys.time(), "%Y-%m-%d %H:%M:%S %Z"),
+    "*\n"
+  )
+  writeLines(c(oral_notes, notes_footer), oral_notes_path)
+  cat(sprintf("  ✓ Oral discussion notes saved: %s\n\n", oral_notes_path))
+}
 
 # --- Create Q&A quick reference card ---
 qa_card <- data.frame(

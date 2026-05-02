@@ -1127,7 +1127,30 @@ Phase 17 code implemented and complete. All consistency checks automated. Reprod
 | Decision | Choice | Evidence |
 |----------|--------|----------|
 | Phase 17 status after targeted rerun | **COMPLETE** (within current available outputs) | Output summary reports all checks passed; files regenerated: `consistency_check_results.csv`, `reproducibility_verification.csv`, `submission_package_checklist.csv`, `oral_qa_quick_reference.csv`, `src/report/oral_discussion_notes.md`. |
-| Remaining submission gap | **Final report PDF still pending** | `submission_package_checklist.csv` still marks final PDF missing; report finalization deferred until Phase 11 recovery and pending sensitivity fit decisions are resolved. |
+| Remaining submission gap | **Historical note (superseded on 2026-05-02)** | At the time of this 2026-04-26 rerun, `submission_package_checklist.csv` marked the final PDF missing. This was subsequently resolved in the 2026-05-02 finalization entry where `src/report/report.pdf` is recorded as complete. |
+
+---
+
+### 2026-05-02 — Final Run Status & Submission Finalization
+
+| Decision | Choice | Evidence / Rationale |
+|----------|--------|----------------------|
+| Phase 11 status | **COMPLETE (reduced design)** | `phase11_full_20260426_145158.log` shows M1 30/30, M2 30/30, M3 10/10 — every executed replicate converged. Postprocessing rerun on 2026-05-02 to refresh stale tables (`recovery_performance.csv`, `recovery_failure_summary.csv`). Reduction from the originally targeted 50/50/50 design is a deliberate computational accommodation; documented in `notes/analysis_rules.md` as an implementation note (no change to modeling rules). |
+| Phase 13 status | **PARTIAL (bonus)** | M1 (binomial GLM) and M2 (beta-binomial via `VGAM::vglm`) frequentist refits completed and saved. M3 GLMM via `lme4::glmer` failed locally with `function 'cholmod_factor_ldetA' not provided by package 'Matrix'` — known binary incompatibility, unrelated to model specification. Documented as a non-fatal limitation; primary recommendation does not depend on it. |
+| Phase 14 status | **PARTIAL** | 14.1, 14.2, 14.5 frequentist arms completed. 14.3/14.4 prior sensitivity: alternative JAGS specifications written (`model2_phi_sensitivity.jags`, `model3_sigma_sensitivity.jags`), but full Bayesian refits **not run** (computational scope). Status logic in `src/main.R` updated to detect actual posterior `.rds` files (`sens_14_3_phi_posterior.rds`, `sens_14_4_sigma_posterior.rds`) before claiming Bayesian completion; the previous logic claimed completion based on JAGS availability alone, which was misleading. |
+| Phase 17.4 status | **COMPLETE** | The `\|\|` string-concatenation bug previously documented on 2026-04-26 is fixed; the current oral-notes block in `src/main.R` uses a single static markdown string passed to `writeLines`. Re-run on 2026-05-02 produces `oral_discussion_notes.md`, `oral_qa_quick_reference.csv`, `submission_package_checklist.csv`, and `consistency_check_results.csv` cleanly. |
+| Submission checklist JAGS detection fix | Replaced fragile `dirname(file.path(PROJECT_ROOT, gsub("\\*.*", "", loc)))` glob handling with explicit `sub("/[^/]*$", "", loc)` directory split + `utils::glob2rx` regex | The previous glob expansion produced `dirname(".../src/models/")` which strips the last directory and returns `.../src` rather than `.../src/models`, causing the checklist to falsely report JAGS model files as missing while they exist on disk. |
+| Report content | Posterior numbers, DIC, PPC, recovery, frequentist, and sensitivity sections of `src/report/report.Rmd` filled with actual values from the result CSVs; `discussion_content.md`, `conclusion_content.md`, and `oral_discussion_notes.md` rewritten with concrete results (M3 preferred; ΔDIC = 2,220 vs M2; β₀ = 1.77; σ_u = 0.72; φ = 42.9; PPC T1b p = 0.32 for M3). | Removes "[To be completed when posteriors are available]" placeholders that were stale because the posteriors are now available. |
+| Recovery postprocess refresh | Re-ran `Rscript src/scripts/postprocess_phase11.R` on 2026-05-02 | Pre-existing `recovery_performance.csv` reflected an older partial state (10/30 M1 reps, claimed failure rate 0.667) inconsistent with the on-disk `recovery_results_m1.rds`. After refresh: M1 30/30, M2 30/30, M3 10/10, mean coverage 0.93/0.96/0.97. |
+| Final PDF rendering | **COMPLETE** — `src/report/report.pdf` rendered successfully on 2026-05-02 (1.97 MB, 7 pages, 49 chunks executed) | The report was rendered from `src/report/report.Rmd` after installing `kableExtra`, removing the missing `apa.csl` reference, and escaping the LaTeX `%` issue in the recovery-performance caption. Submission checklist subsequently marks all 12 required items as Ready. |
+
+---
+
+### 2026-05-02 — Final Report Export Format Changed to HTML
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| Final report format | `src/report/report.html` rendered from `src/report/report.Rmd` | The final submission is a written report with embedded figures and tables, generated reproducibly from R Markdown. HTML is used as the final readable artifact instead of PDF to preserve code/result integration and avoid LaTeX/PDF dependency issues. Existing PDF exports are retained as optional artifacts but are not the primary submission target. |
 
 ---
 

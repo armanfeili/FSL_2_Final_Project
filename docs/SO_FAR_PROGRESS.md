@@ -2,14 +2,14 @@
 
 **Project:** Bayesian Modeling of Cross-Country TB Treatment Success
 **Course:** Fundamentals of Statistical Learning II — M.Sc. in Data Science, a.y. 2025–2026
-**Snapshot date:** 2026-04-26
-**Last code activity:** 2026-04-20 (M3 promoted, Phases 9/10/12 completed)
+**Snapshot date:** 2026-05-02
+**Last code activity:** 2026-05-02 (Phase 17 finalization: oral-notes bug already fixed, JAGS-checklist detection fixed, recovery postprocess refreshed, report content rewritten with actual posterior numbers)
 
 ---
 
 ## 1. One-paragraph status
 
-The project has progressed through **all 17 planned phases**. The full Bayesian workflow — from raw data intake through DIC model comparison, posterior predictive checks, frequentist comparison, and sensitivity analyses — has been executed end-to-end on a single locked country-year analysis table (1,862 rows × 180 countries × 12 years, 2012–2023). All three Bayesian models (M1 binomial, M2 beta-binomial, M3 hierarchical beta-binomial) were fitted with JAGS, with M3 only converging after a non-trivial 6-attempt remediation trail that culminated in a **region-centered non-centered parameterization** fitted in parallel across 4 cores. M3 is the clear winner: ΔDIC ≈ 2,220 vs M2 and ≈ 2.6M vs M1, with min ESS = 407 and max R-hat = 1.007 on key globals. The remaining work is **(i)** the full 50-replicate parameter recovery study (Phase 11), of which only a 3-rep pilot has run, **(ii)** the JAGS-based prior sensitivity analyses 14.3 and 14.4 (frequentist parts of Phase 14 are done), and **(iii)** rendering the final report PDF and slotting in the actual posterior numbers in place of placeholders in [src/report/report.Rmd](src/report/report.Rmd).
+The project has progressed through **all 17 planned phases**. The full Bayesian workflow — from raw data intake through DIC model comparison, posterior predictive checks, frequentist comparison, and sensitivity analyses — has been executed end-to-end on a single locked country-year analysis table (1,862 rows × 180 countries × 12 years, 2012–2023). All three Bayesian models (M1 binomial, M2 beta-binomial, M3 hierarchical beta-binomial) were fitted with JAGS, with M3 only converging after a non-trivial 6-attempt remediation trail that culminated in a **region-centered non-centered parameterization** fitted in parallel across 4 cores. M3 is the clear winner: ΔDIC ≈ 2,220 vs M2 and ≈ 2.6M vs M1, with min ESS = 407 and max R-hat = 1.007 on key globals. **Parameter recovery is now complete with a reduced design** — M1 30/30, M2 30/30, M3 10/10 successful replicates (50/50/50 was the original target; reduced for computational scope and documented as an implementation note). **Frequentist comparison is partial**: M1 GLM and M2 VGAM fitted; M3 GLMM failed locally due to a Matrix/lme4 binary incompatibility (`function 'cholmod_factor_ldetA' not provided by package 'Matrix'`) — bonus, non-fatal. **Phase 14 is partial**: frequentist arms 14.1/14.2/14.5 are complete; 14.3/14.4 are spec-only (alternative JAGS files written, full Bayesian refits not run). The report content (`src/report/report.Rmd`, discussion/conclusion content, oral-notes) was rewritten on 2026-05-02 with actual posterior numbers and finalized narrative markers. The final submission artifact is now the HTML report at `src/report/report.html` (with `src/report/Arman_Feili_FSL2_Final_Report.html` as the named copy); existing PDF export is retained as an optional legacy artifact.
 
 ---
 
@@ -28,13 +28,13 @@ The project has progressed through **all 17 planned phases**. The full Bayesian 
 | 8 | Full MCMC fitting & diagnostics | Complete (after M3 remediation) | [posterior_m1.rds](src/outputs/model_objects/posterior_m1.rds), [posterior_m2.rds](src/outputs/model_objects/posterior_m2.rds), [posterior_m3.rds](src/outputs/model_objects/posterior_m3.rds), [posterior_m3_u.rds](src/outputs/model_objects/posterior_m3_u.rds) |
 | 9 | Posterior inference | Complete | [posterior_summary_m1.csv](src/outputs/tables/posterior_summary_m1.csv) / [m2](src/outputs/tables/posterior_summary_m2.csv) / [m3](src/outputs/tables/posterior_summary_m3.csv), [hypothesis_tests_summary.csv](src/outputs/tables/hypothesis_tests_summary.csv), [country_re_caterpillar_plot.png](src/outputs/figures/country_re_caterpillar_plot.png) |
 | 10 | Posterior predictive checks | Complete | [ppc_summary_table.csv](src/outputs/tables/ppc_summary_table.csv), 9 PPC figures |
-| 11 | Parameter recovery simulation | **Partial** — pilot only (3 reps × 3 models) | [pilot_summary_long.csv](src/outputs/simulations/pilot/pilot_summary_long.csv) |
+| 11 | Parameter recovery simulation | **Complete (reduced design)** — M1 30/30, M2 30/30, M3 10/10 successful replicates (50/50/50 was the original target; reduced for computational scope) | [recovery_results_m1.rds](src/outputs/simulations/recovery_results_m1.rds), [recovery_performance.csv](src/outputs/tables/recovery_performance.csv), [recovery_failure_summary.csv](src/outputs/tables/recovery_failure_summary.csv), [recovery_bias_plot.png](src/outputs/figures/recovery_bias_plot.png) |
 | 12 | DIC model comparison | Complete | [dic_comparison_table.csv](src/outputs/tables/dic_comparison_table.csv), [dic_results.rds](src/outputs/model_objects/dic_results.rds) |
-| 13 | Frequentist comparison (bonus) | Complete | Comparison tables in [src/outputs/tables/](src/outputs/tables/) |
-| 14 | Sensitivity analyses | **Partial** — frequentist arms done; 14.3 & 14.4 (prior sensitivities) Bayesian arm not run | Alt JAGS files: [model2_phi_sensitivity.jags](src/models/model2_phi_sensitivity.jags), [model3_sigma_sensitivity.jags](src/models/model3_sigma_sensitivity.jags) |
+| 13 | Frequentist comparison (bonus) | **Partial bonus** — M1 GLM and M2 VGAM fitted; M3 GLMM unavailable due to local Matrix/lme4 binary incompatibility | [bayesian_vs_frequentist_comparison.csv](src/outputs/tables/bayesian_vs_frequentist_comparison.csv), [frequentist_model_summaries.csv](src/outputs/tables/frequentist_model_summaries.csv) |
+| 14 | Sensitivity analyses | **Partial** — 14.1, 14.2, 14.5 frequentist arms completed; 14.3 and 14.4 are spec-only (alternative JAGS specifications written, full Bayesian refits not run) | Alt JAGS files: [model2_phi_sensitivity.jags](src/models/model2_phi_sensitivity.jags), [model3_sigma_sensitivity.jags](src/models/model3_sigma_sensitivity.jags) |
 | 15 | Final tables, figures & appendix | Complete | [table_manifest.csv](src/outputs/tables/table_manifest.csv), [figure_manifest.csv](src/outputs/tables/figure_manifest.csv), [reproducibility_appendix.txt](src/outputs/tables/reproducibility_appendix.txt) |
-| 16 | Report writing | **Partial** — template + content scaffolding done; PDF not rendered, posterior placeholders not yet filled | [src/report/report.Rmd](src/report/report.Rmd), [discussion_content.md](src/report/discussion_content.md), [conclusion_content.md](src/report/conclusion_content.md) |
-| 17 | Final validation & submission | **Partial** — automated checks pass; PDF + slides pending | [consistency_check_results.csv](src/outputs/tables/consistency_check_results.csv), [oral_discussion_notes.md](src/report/oral_discussion_notes.md) |
+| 16 | Report writing | **Complete** — `report.Rmd`, `discussion_content.md`, `conclusion_content.md`, `oral_discussion_notes.md` rewritten with actual results; final report rendered to HTML (`report.html`) | [src/report/report.Rmd](src/report/report.Rmd), [src/report/report.html](src/report/report.html), [discussion_content.md](src/report/discussion_content.md), [conclusion_content.md](src/report/conclusion_content.md) |
+| 17 | Final validation & submission | **Targeted rerun complete** — oral-notes generation works, JAGS-checklist detection bug fixed, submission checklist accurate | [consistency_check_results.csv](src/outputs/tables/consistency_check_results.csv), [oral_discussion_notes.md](src/report/oral_discussion_notes.md), [submission_package_checklist.csv](src/outputs/tables/submission_package_checklist.csv) |
 
 ---
 
@@ -136,9 +136,17 @@ From [ppc_summary_table.csv](src/outputs/tables/ppc_summary_table.csv):
 
 **Reading:** M1 catastrophically understates variance and the lower tail (T2, T3, T4 all extreme). M2 fixes T2/T4 but overshoots the lower tail (T3 = 1.000 — predicts way too many country-years below 0.70). M3 is the only model whose central tendency is well-calibrated (T1b = 0.321) and whose variance is approximately captured (T2 = 0.042 — borderline, mildly underdispersed). M3 still over-predicts the lower tail (T3 = 1.000) and shows residual within-region heterogeneity (T4a = 0.004), which would be the next direction for refinement.
 
-### 5.5 Parameter recovery — pilot snapshot (Phase 11, 3 reps each)
+### 5.5 Parameter recovery (Phase 11, reduced design)
 
-From [pilot_summary_long.csv](src/outputs/simulations/pilot/pilot_summary_long.csv): the M1 fixed effects recover cleanly (95% CI coverage hits true value in nearly all 3 reps). M2 also recovers φ and the β coefficients reasonably. **M3 shows the expected challenge**: at the short pilot MCMC budget, β₂ has R-hat 1.42–1.51 and ESS ≈ 20, and several γ parameters are also slow. The full 50-rep recovery is what is still owed.
+From [recovery_failure_summary.csv](src/outputs/tables/recovery_failure_summary.csv) and [recovery_performance.csv](src/outputs/tables/recovery_performance.csv) (postprocess refreshed 2026-05-02):
+
+| Model | Replicates | Mean coverage (key globals) | Mean R-hat | Min ESS |
+|---|---|---|---|---|
+| M1 | 30 / 30 | 0.93 | 1.007 | 104 |
+| M2 | 30 / 30 | 0.96 | 1.004 | 177 |
+| M3 | 10 / 10 | 0.97 | 1.019 | 42 |
+
+Every executed replicate converged. Mean 95% credible-interval coverage is close to the nominal 0.95 target for all three models, and biases are small relative to posterior SDs. The originally targeted recovery design was **50 replicates × 3 models**; the executed design is **30 / 30 / 10**, a deliberate computational accommodation reflecting the per-replicate cost of M2 (~13 min) and M3 (~25–30 min, with one outlier replicate >7 hours). The reduction is documented in `notes/decision_log.md` and `notes/analysis_rules.md` as an implementation note — it changes the precision of the recovery estimates but not the modeling rules.
 
 ---
 
@@ -146,20 +154,16 @@ From [pilot_summary_long.csv](src/outputs/simulations/pilot/pilot_summary_long.c
 
 | # | Work item | Status | Why it matters | Effort |
 |---|---|---|---|---|
-| R1 | **Phase 11 full parameter recovery** — 50 reps × 3 models | Pilot only (3 reps); R-hat & ESS for M3 not at recovery thresholds in pilot | Course requirement #5 (parameter recovery with simulated data) | High — M3 reps each take O(hours) at the region-centered budget; consider relaxed-but-justified MCMC settings (2 ch × 1k burn × 2k iter) or Tier-3 fallback to 30 reps |
-| R2 | **Phase 14.3 Bayesian phi-prior sensitivity** | Alt JAGS file [model2_phi_sensitivity.jags](src/models/model2_phi_sensitivity.jags) exists; not yet fit | Tests whether overdispersion conclusion is prior-driven | Low — one M2 refit |
-| R3 | **Phase 14.4 Bayesian σᵤ-prior sensitivity** | Alt JAGS file [model3_sigma_sensitivity.jags](src/models/model3_sigma_sensitivity.jags) exists; not yet fit | Tests whether country-RE conclusion is prior-driven | Medium — one M3 refit at full region-centered budget |
-| R4 | **Bayesian-vs-frequentist side-by-side comparison columns** populated | Frequentist models fit; Bayesian columns currently NA in the comparison table | Cleanly closes the §16 bonus section | Low — post-processing only, posteriors already on disk |
-| R5 | **Replace placeholders in [src/report/report.Rmd](src/report/report.Rmd)** with the actual posterior numbers from §5 above (DIC table, M3 coefficients, PPC p-values, country RE highlights) | Template ready, sections marked "[To be completed when Bayesian posteriors are available]" | These posteriors *are* now available — the placeholder text is stale | Medium — narrative work, no new computation |
-| R6 | **Render the final PDF** with `rmarkdown::render('src/report/report.Rmd')` | Not run | Submission deliverable | Low (once R5 is done) |
-| R7 | **Oral defense slides / talking notes** | Q&A reference and outline at [src/report/oral_discussion_notes.md](src/report/oral_discussion_notes.md) exist as text | Course requires oral discussion | Low–Medium |
-| R8 | **Optional: WAIC / LOO-CV** in appendix | Not implemented (Tier 3 nice-to-have) | Strengthens model-comparison story; not required | Medium |
-| R9 | **Optional: address M3 lower-tail miscalibration** (PPC T3 = 1.000) | Documented but not addressed | A cleaner story would either explain why this is acceptable in the discussion or test a heavy-tailed extension | Low (discussion) or High (new model) |
-| R10 | **Cleanup**: development scripts under [src/scripts/](src/scripts/) document the M3 remediation trail but are not on the final execution path. Decide whether to keep them as audit history or move to a `scripts/archive/` subfolder. | Decision pending | Tidiness for submission package | Trivial |
+| R2 | **Phase 14.3 Bayesian phi-prior sensitivity** | Alt JAGS file [model2_phi_sensitivity.jags](src/models/model2_phi_sensitivity.jags) exists; not yet fit | Tests whether overdispersion conclusion is prior-driven; bonus | Low — one M2 refit |
+| R3 | **Phase 14.4 Bayesian σᵤ-prior sensitivity** | Alt JAGS file [model3_sigma_sensitivity.jags](src/models/model3_sigma_sensitivity.jags) exists; not yet fit | Tests whether country-RE conclusion is prior-driven; bonus | Medium — one M3 refit at full region-centered budget |
+| R4 | **Phase 13 M3 frequentist GLMM** | `lme4::glmer` failed locally with `function 'cholmod_factor_ldetA' not provided by package 'Matrix'` | Bonus comparison; non-fatal | Optional — would require reinstalling/rebuilding `Matrix` and `lme4` |
+| R5 | **Optional: WAIC / LOO-CV** in appendix | Not implemented (Tier 3) | Strengthens model-comparison story; not required by course | Medium |
+| R6 | **Optional: address M3 lower-tail miscalibration** (PPC T3 = 1.000) | Documented in discussion as residual misfit and natural target for a future heavy-tailed extension | Cleaner story — but already addressed in narrative | Low (already done in narrative) or High (new model) |
+| R7 | **Cleanup**: development scripts under [src/scripts/](src/scripts/) document the M3 remediation trail but are not on the final execution path. They are kept as audit history; documented in README and analysis_rules as auxiliary scripts. | Done — kept as documented audit trail | Tidiness | Trivial |
 
 ### Critical-path recommendation
 
-To finish the project as a defensible Tier-2 submission, the minimal remaining sequence is **R5 → R6 → R7**, with R1 (parameter recovery, even at 30 reps with a relaxed-but-justified MCMC budget) being the highest-value addition because it is an explicit course requirement rather than a bonus. R2/R3/R4 are short polish items that strengthen the sensitivity and frequentist sections but don't change the headline conclusion.
+No submission-critical must-do remains. R2/R3/R4 are optional bonus polish, and the headline preference for M3 already rests on completed DIC and PPC analyses on the locked dataset.
 
 ---
 
