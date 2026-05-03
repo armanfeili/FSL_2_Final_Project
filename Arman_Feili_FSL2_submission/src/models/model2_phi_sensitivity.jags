@@ -1,0 +1,29 @@
+
+model {
+  # Priors
+  beta0 ~ dnorm(0, 0.16)  # N(0, 2.5^2) -> precision = 1/6.25 = 0.16
+  for (j in 1:p) {
+    beta[j] ~ dnorm(0, 0.16)
+  }
+  for (r in 2:R) {
+    gamma[r] ~ dnorm(0, 0.16)
+  }
+  gamma[1] <- 0  # AFR baseline
+  
+  # ALTERNATIVE phi prior: Gamma(1, 0.1) -> Mean=10, more conservative
+  phi ~ dgamma(1, 0.1)
+  
+  # Likelihood
+  for (i in 1:N) {
+    logit_mu[i] <- beta0 + inprod(X[i,], beta) + gamma[region[i]]
+    mu[i] <- ilogit(logit_mu[i])
+    alpha[i] <- mu[i] * phi
+    b[i] <- (1 - mu[i]) * phi
+    theta[i] ~ dbeta(alpha[i], b[i])
+    Y[i] ~ dbin(theta[i], n[i])
+    
+    # Posterior predictive
+    Y_rep[i] ~ dbin(theta[i], n[i])
+  }
+}
+

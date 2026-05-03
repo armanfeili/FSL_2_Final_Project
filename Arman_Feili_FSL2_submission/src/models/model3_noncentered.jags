@@ -1,0 +1,66 @@
+# Model 3: Hierarchical Beta-Binomial Regression (Non-Centered Parameterization)
+# ==============================================================================
+# 
+# Project: Bayesian Modeling of Cross-Country TB Treatment Success
+# Course: Fundamentals of Statistical Learning II
+# 
+# This is the backup non-centered parameterization for Model 3.
+# Use if the centered parameterization (model3_hierarchical_betabinomial.jags)
+# shows poor mixing or divergent transitions.
+# 
+# Non-centered parameterization:
+#   u_c = sigma_u * z_c, where z_c ~ N(0, 1)
+# 
+# This separates the scale (sigma_u) from the raw effects (z_c),
+# which can improve sampling when data are weakly informative about
+# the random effects.
+
+model {
+  # Likelihood
+  for (i in 1:N) {
+    # Linear predictor with non-centered country random effect
+    # u[country[i]] = sigma_u * z[country[i]]
+    logit(mu[i]) <- beta0 + inprod(X[i,], beta[]) + gamma[region[i]] + sigma_u * z[country[i]]
+    
+    # Beta-distributed latent probability (overdispersion)
+    alpha_param[i] <- mu[i] * phi
+    beta_param[i] <- (1 - mu[i]) * phi
+    
+    theta[i] ~ dbeta(alpha_param[i], beta_param[i])
+    
+    # Binomial observation model with latent theta
+    Y[i] ~ dbin(theta[i], n[i])
+    
+    # For posterior predictive checks: replicated data
+    theta_rep[i] ~ dbeta(alpha_param[i], beta_param[i])
+    Y_rep[i] ~ dbin(theta_rep[i], n[i])
+  }
+  
+  # Country random effects (non-centered parameterization)
+  # z_c are standardized random effects
+  for (c in 1:C) {
+    z[c] ~ dnorm(0, 1)
+    # Compute actual random effect for monitoring
+    u[c] <- sigma_u * z[c]
+  }
+  
+  # Hyperprior for country random effect SD
+  # sigma_u ~ Half-Normal(0, 1)
+  sigma_u ~ dnorm(0, 1) T(0, )
+  
+  # Priors for fixed effects
+  beta0 ~ dnorm(0, 0.16)  # precision = 1/(2.5^2) = 0.16
+  
+  for (j in 1:n_pred) {
+    beta[j] ~ dnorm(0, 0.16)
+  }
+  
+  # Region fixed effects (gamma_1 = 0 as baseline)
+  gamma[1] <- 0
+  for (r in 2:R) {
+    gamma[r] ~ dnorm(0, 0.16)
+  }
+  
+  # Overdispersion parameter
+  phi ~ dgamma(2, 0.1)
+}

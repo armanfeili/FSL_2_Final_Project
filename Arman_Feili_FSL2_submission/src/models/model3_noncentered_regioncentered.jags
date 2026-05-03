@@ -1,0 +1,40 @@
+model {
+  for (i in 1:N) {
+    logit(mu[i]) <- beta0 + inprod(X[i,], beta[]) + gamma[region[i]] + u[country[i]]
+
+    alpha_param[i] <- mu[i] * phi
+    beta_param[i] <- (1 - mu[i]) * phi
+
+    theta[i] ~ dbeta(alpha_param[i], beta_param[i])
+    Y[i] ~ dbin(theta[i], n[i])
+
+    theta_rep[i] ~ dbeta(alpha_param[i], beta_param[i])
+    Y_rep[i] ~ dbin(theta_rep[i], n[i])
+  }
+
+  for (c in 1:C) {
+    z[c] ~ dnorm(0, 1)
+  }
+
+  for (r in 1:R) {
+    mean_z_region[r] <- sum(z[region_start[r]:region_end[r]]) / n_country_region[r]
+  }
+
+  for (c in 1:C) {
+    u[c] <- sigma_u * (z[c] - mean_z_region[country_region[c]])
+  }
+
+  sigma_u ~ dnorm(0, 1) T(0, )
+
+  beta0 ~ dnorm(0, 0.16)
+  for (j in 1:n_pred) {
+    beta[j] ~ dnorm(0, 0.16)
+  }
+
+  gamma[1] <- 0
+  for (r in 2:R) {
+    gamma[r] ~ dnorm(0, 0.16)
+  }
+
+  phi ~ dgamma(2, 0.1)
+}

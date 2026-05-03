@@ -530,9 +530,9 @@ WHO provides descriptive statistics, but no formal Bayesian comparison has exami
 
 ## Research Question
 
-> We compare three Bayesian models to find which best explains and predicts TB treatment success.
+> We compare three Bayesian models to find which best explains and reproduces TB treatment success.
 
-**Research question:** Which Bayesian model best explains and predicts country-year TB treatment success in 2012-2023: a binomial logistic model, a beta-binomial model, or a hierarchical beta-binomial model?
+**Research question:** Which Bayesian model best explains and reproduces country-year TB treatment success in 2012-2023: a binomial logistic model, a beta-binomial model, or a hierarchical beta-binomial model?
 
 This question is:
 
@@ -1082,7 +1082,7 @@ if (file.exists(m3_fig)) {
 
 *Figure: M3 trace and density diagnostics for selected parameters after using the region-centered parameterization. The trace plots show stable sampling for the region effect, overdispersion parameter, and country-level heterogeneity parameter. The density plots are smooth and concentrated, suggesting that the final M3 fit mixes well. This supports the conclusion that the reparameterized hierarchical model is reliable for posterior inference.*
 
-Overall, the trace and density plots show stable sampling behavior for the monitored parameters. The visual diagnostics agree with the numerical diagnostics: all final models satisfy the convergence rule of R-hat below 1.05 and ESS above 400 for the key monitored parameters. Therefore, the posterior samples are acceptable for the model comparison and substantive interpretation.
+Overall, the trace and density plots show stable sampling behavior for the monitored parameters. The visual diagnostics agree with the numerical diagnostics: all final models satisfy the convergence rule of R-hat at or below 1.05 and ESS above 400 for the key monitored parameters. Therefore, the posterior samples are acceptable for the model comparison and substantive interpretation.
 
 ---
 

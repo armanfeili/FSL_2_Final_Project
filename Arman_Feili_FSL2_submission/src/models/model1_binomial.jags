@@ -1,0 +1,40 @@
+# Model 1: Binomial Logistic Regression
+# ======================================
+# 
+# Project: Bayesian Modeling of Cross-Country TB Treatment Success
+# Course: Fundamentals of Statistical Learning II
+# 
+# Likelihood: Y_it ~ Binomial(n_it, p_it)
+# Link: logit(p_it) = beta0 + X_it * beta + gamma[region_it]
+# 
+# Priors:
+#   beta_j ~ N(0, 2.5^2) for all j
+#   gamma_r ~ N(0, 2.5^2) for r = 2, ..., R
+#   gamma_1 = 0 (baseline region: AFR)
+
+model {
+  # Likelihood
+  for (i in 1:N) {
+    # Linear predictor on logit scale
+    logit(prob[i]) <- beta0 + inprod(X[i,], beta[]) + gamma[region[i]]
+    
+    # Binomial observation model
+    Y[i] ~ dbin(prob[i], n[i])
+    
+    # For posterior predictive checks: replicated data
+    Y_rep[i] ~ dbin(prob[i], n[i])
+  }
+  
+  # Priors for fixed effects
+  beta0 ~ dnorm(0, 0.16)  # precision = 1/(2.5^2) = 0.16
+  
+  for (j in 1:n_pred) {
+    beta[j] ~ dnorm(0, 0.16)
+  }
+  
+  # Region fixed effects (gamma_1 = 0 as baseline)
+  gamma[1] <- 0
+  for (r in 2:R) {
+    gamma[r] ~ dnorm(0, 0.16)
+  }
+}

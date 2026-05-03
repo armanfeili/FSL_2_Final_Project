@@ -1,0 +1,60 @@
+# Model 2: Beta-Binomial Regression
+# ==================================
+# 
+# Project: Bayesian Modeling of Cross-Country TB Treatment Success
+# Course: Fundamentals of Statistical Learning II
+# 
+# This model adds overdispersion via a latent beta-distributed probability.
+# 
+# Likelihood: 
+#   theta_it ~ Beta(mu_it * phi, (1 - mu_it) * phi)
+#   Y_it ~ Binomial(n_it, theta_it)
+#
+# Link: logit(mu_it) = beta0 + X_it * beta + gamma[region_it]
+# 
+# Priors:
+#   beta_j ~ N(0, 2.5^2) for all j
+#   gamma_r ~ N(0, 2.5^2) for r = 2, ..., R
+#   gamma_1 = 0 (baseline region: AFR)
+#   phi ~ Gamma(2, 0.1)
+
+model {
+  # Likelihood
+  for (i in 1:N) {
+    # Linear predictor for mean mu on logit scale
+    logit(mu[i]) <- beta0 + inprod(X[i,], beta[]) + gamma[region[i]]
+    
+    # Beta-distributed latent probability (overdispersion)
+    # Parameterized as Beta(alpha, beta) where:
+    #   alpha = mu * phi
+    #   beta = (1 - mu) * phi
+    alpha_param[i] <- mu[i] * phi
+    beta_param[i] <- (1 - mu[i]) * phi
+    
+    theta[i] ~ dbeta(alpha_param[i], beta_param[i])
+    
+    # Binomial observation model with latent theta
+    Y[i] ~ dbin(theta[i], n[i])
+    
+    # For posterior predictive checks: replicated data
+    theta_rep[i] ~ dbeta(alpha_param[i], beta_param[i])
+    Y_rep[i] ~ dbin(theta_rep[i], n[i])
+  }
+  
+  # Priors for fixed effects
+  beta0 ~ dnorm(0, 0.16)  # precision = 1/(2.5^2) = 0.16
+  
+  for (j in 1:n_pred) {
+    beta[j] ~ dnorm(0, 0.16)
+  }
+  
+  # Region fixed effects (gamma_1 = 0 as baseline)
+  gamma[1] <- 0
+  for (r in 2:R) {
+    gamma[r] ~ dnorm(0, 0.16)
+  }
+  
+  # Overdispersion parameter
+  # Mean = 2/0.1 = 20, Variance = 2/0.01 = 200
+  phi ~ dgamma(2, 0.1)
+}
