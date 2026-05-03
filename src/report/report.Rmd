@@ -500,7 +500,7 @@ h1, h2, h3, h4, h5, h6 {
 - The binomial model (M1) severely underestimates variability
 - M3 captures both overdispersion ($\phi = 42.9$) and persistent country heterogeneity ($\sigma_u = 0.72$)
 - Under M3: mortality is negatively associated with success, incidence is positively associated after controlling for country effects
-- Posterior predictive checks show M3 calibrates the mean (Bayesian p = 0.32) and substantially improves variance recovery, although the variance check remains near the lower tail (p = 0.04)
+- Posterior predictive checks show that M3 calibrates the cohort-weighted mean well (Bayesian p = 0.32) and substantially improves variance recovery, although the variance check is still not perfectly centered (p = 0.04) and lower-tail miscalibration remains
 
 **Conclusion:** TB treatment success varies more than binomial sampling alone can explain. Both overdispersion and persistent country effects are needed. M3 is the best model among those compared, though residual lower-tail miscalibration remains.
 
@@ -510,7 +510,7 @@ h1, h2, h3, h4, h5, h6 {
 
 ## Main Finding
 
-> **The hierarchical beta-binomial model (M3) is preferred.** It has the lowest DIC (24,940 vs 27,160 for M2 vs 2.6 million for M1) and best overall posterior predictive performance. M3 captures both overdispersion ($\phi = 42.9$) and persistent country-level heterogeneity ($\sigma_u = 0.72$).
+> **The hierarchical beta-binomial model (M3) is preferred among the three fitted models.** It has the lowest DIC (24,940 vs 27,160 for M2 vs 2.6 million for M1) and the best posterior predictive performance among the three models. M3 captures both overdispersion ($\phi = 42.9$) and persistent country-level heterogeneity ($\sigma_u = 0.72$).
 
 ---
 
@@ -721,7 +721,7 @@ if (file.exists(fp)) {
 }
 ```
 
-*Figure: Average treatment success by WHO region and year. This complements the coverage heatmap by showing not only how many countries are retained in each region-year cell, but also how observed treatment success varies across regions and time.*
+*Figure: Average treatment success by WHO region and year. Each cell shows the mean success rate for one WHO region in one year. The plot shows that treatment success is generally high, but not equal across regions. SEA, AFR, EMR, and WPR mostly stay in the low-to-high 80% range, while EUR and AMR are lower in many years. This supports including WHO region in the models, because regional differences are visible before modeling.*
 
 ---
 
@@ -736,7 +736,7 @@ fig_path <- file.path(FIGURES_DIR, "success_rate_by_region_density.png")
 if (file.exists(fig_path)) knitr::include_graphics(fig_path)
 ```
 
-*Figure: Distribution of treatment success rates by WHO region. Each curve shows where country-year success rates are concentrated within a region. Most values are high, usually around 80-95%, but the curves are not identical across regions. Some regions also have a visible lower tail, meaning there are country-years with much lower success rates. This regional spread and lower-tail behavior motivate models that allow extra variability and country-level differences.*
+*Figure: Distribution of observed treatment success rates by WHO region. Most country-years have high success rates, mainly between about 80% and 95%, but the distributions differ by region. Some regions have wider spreads and lower tails, meaning that a number of country-years have much poorer outcomes. This suggests that ordinary binomial variation alone may be too restrictive and motivates models with overdispersion and country-level heterogeneity.*
 
 ### Temporal Trends
 
@@ -745,7 +745,7 @@ fig_path <- file.path(FIGURES_DIR, "temporal_trend_faceted.png")
 if (file.exists(fig_path)) knitr::include_graphics(fig_path)
 ```
 
-*Figure: Mean treatment success rate over time by WHO region. Each panel shows the average success rate for one region in each year. The regional trends are not identical: some regions remain relatively stable, some improve, and some fluctuate more. These differences justify including WHO region in the models. Because countries within the same region can still differ substantially, the hierarchical model also adds country random effects.*
+*Figure: Mean treatment success rate over time by WHO region. Each panel shows the yearly average for one region. The trends are not identical: AFR improves over time, EUR remains lower than most other regions, and other regions show smaller fluctuations. These differences show that treatment success changes across both region and time, supporting the use of year and region effects in the models.*
 
 ### Bivariate Relationships
 
@@ -756,7 +756,7 @@ if (file.exists(fp)) {
 }
 ```
 
-*Figure: Bivariate relationships among predictors and treatment success. These plots provide a visual check of how the main epidemiological predictors relate to the observed outcome before fitting the Bayesian models.*
+*Figure: Bivariate relationships between treatment success and the main epidemiological predictors before Bayesian modeling. Each point is a country-year observation, colored by WHO region, and the black curve shows the overall smoothed pattern. The relationships are not purely linear and there is substantial spread around the trends. This supports using a flexible count-based modeling approach rather than relying only on simple descriptive correlations.*
 
 Taken together, the EDA shows three important features: high average success, clear regional differences, and extra variation across country-years. This is why the model comparison starts with a simple binomial model and then adds overdispersion and country-level heterogeneity.
 
@@ -1056,7 +1056,7 @@ if (file.exists(m1_fig)) {
 }
 ```
 
-*Figure: M1 trace and density plots for key parameters.*
+*Figure: M1 trace and density diagnostic for a selected monitored parameter. The trace plot shows that the MCMC samples fluctuate around a stable level without a visible trend, which is what we expect from a well-mixing chain. The density plot summarizes the posterior distribution of the parameter after sampling. Together with the R-hat and ESS results above, this supports acceptable convergence for M1.*
 
 ```{r m2-trace-density}
 m2_fig <- file.path(FIGURES_DIR, "m2_extended_trace_density_core.png")
@@ -1068,7 +1068,7 @@ if (file.exists(m2_fig)) {
 }
 ```
 
-*Figure: M2 trace and density plots for key parameters.*
+*Figure: M2 trace and density diagnostics for selected regression and overdispersion parameters. The trace plots show stable sampling with no clear drift over iterations, and the density plots show smooth posterior distributions. This indicates that the beta-binomial model mixed well and that its posterior samples can be used for inference.*
 
 ```{r m3-trace-density}
 m3_fig <- file.path(FIGURES_DIR, "m3_regioncentered_full_trace_density_core.png")
@@ -1080,9 +1080,9 @@ if (file.exists(m3_fig)) {
 }
 ```
 
-*Figure: M3 trace and density plots for key parameters. The traces show stable, well-mixed chains with no visible trend or separation between chains, and the posterior densities overlap well across chains.*
+*Figure: M3 trace and density diagnostics for selected parameters after using the region-centered parameterization. The trace plots show stable sampling for the region effect, overdispersion parameter, and country-level heterogeneity parameter. The density plots are smooth and concentrated, suggesting that the final M3 fit mixes well. This supports the conclusion that the reparameterized hierarchical model is reliable for posterior inference.*
 
-Trace and density plots for the key parameters show stable mixing and overlapping posterior distributions across chains. Together with R-hat values below 1.05 and ESS values above 400 for the monitored key parameters, these diagnostics support using the posterior samples for inference.
+Overall, the trace and density plots show stable sampling behavior for the monitored parameters. The visual diagnostics agree with the numerical diagnostics: all final models satisfy the convergence rule of R-hat below 1.05 and ESS above 400 for the key monitored parameters. Therefore, the posterior samples are acceptable for the model comparison and substantive interpretation.
 
 ---
 
@@ -1152,7 +1152,7 @@ fig_path <- file.path(FIGURES_DIR, "recovery_coverage_plot.png")
 if (file.exists(fig_path)) knitr::include_graphics(fig_path)
 ```
 
-*Figure: 95% credible interval coverage by parameter. The horizontal line marks 95%. Bars near or above the line indicate good calibration. All models show coverage close to the nominal level.*
+*Figure: Recovery performance measured by 95% credible-interval coverage for each parameter in M1, M2, and M3. The dashed horizontal line marks the nominal 95% target. Bars close to this line indicate that the fitted model usually recovers the true parameter value at the expected rate. Overall, coverage is close to the target for most parameters, which supports good calibration under the recovery design.*
 
 ### Recovery Conclusions
 
@@ -1166,7 +1166,7 @@ All models show good calibration. Biases are small relative to posterior standar
 
 # Results and Model Checking
 
-> M3 is the preferred model. It has the lowest DIC and the best posterior predictive performance, though some residual miscalibration remains.
+> M3 is preferred among the three fitted models. It has the lowest DIC and the best posterior predictive performance among the three models, though some residual miscalibration remains.
 
 ## Model Comparison
 
@@ -1226,7 +1226,7 @@ if (file.exists(fp)) {
 }
 ```
 
-*Figure: M1 posterior predictive test statistics showing systematic misfit, especially for variance and lower-tail behavior.*
+*Figure: Posterior predictive checks for M1. In each panel, the blue histogram and curve show the model's replicated values, while the red vertical line shows the observed value from the real data. M1 matches the cohort-weighted mean reasonably well, but it clearly misses the variance, the number of low-success observations, and the within-region variability. This shows that the simple binomial model is too rigid for these data.*
 
 ```{r ppc-model-test-stats-m2, results='asis'}
 fp <- file.path(FIGURES_DIR, "ppc_m2_test_statistics.png")
@@ -1235,7 +1235,7 @@ if (file.exists(fp)) {
 }
 ```
 
-*Figure: M2 posterior predictive test statistics showing improved but still imperfect calibration.*
+*Figure: Posterior predictive checks for M2. Compared with M1, the beta-binomial model produces replicated data that are closer to the observed data for several test statistics, especially the overall spread. However, some mismatch remains, particularly for the lower-tail count and, to a lesser extent, the mean and within-region variability. This indicates that adding overdispersion improves fit, but does not fully capture the structure in the data.*
 
 ```{r ppc-model-test-stats-m3, results='asis'}
 fp <- file.path(FIGURES_DIR, "ppc_m3_test_statistics.png")
@@ -1244,7 +1244,7 @@ if (file.exists(fp)) {
 }
 ```
 
-*Figure: M3 posterior predictive test statistics showing the best overall calibration among the three fitted models, although lower-tail and within-region miscalibration remain.*
+*Figure: Posterior predictive checks for M3. The replicated distributions are generally closer to the observed values than in M1 and M2, especially for the cohort-weighted mean and the overall variance. This makes M3 the best-fitting model among the three. Even so, the figure still shows some remaining mismatch for the lower-tail count and within-region variance, so the fit is improved but not perfect.*
 
 ### PPC Results by Model
 
@@ -1280,7 +1280,7 @@ if (file.exists(fp)) {
 }
 ```
 
-*Figure: M1 cohort-stratified calibration. The binomial model shows poor calibration because it underestimates variability across cohort sizes.*
+*Figure: M1 cohort calibration by cohort size. Each point compares the observed success rate with the mean posterior predictive success rate for one country-year, separately for large and small cohorts. The dashed diagonal line represents perfect calibration: points close to the line mean predicted and observed values agree. Many points are far from the line, showing that the binomial model does not reproduce the observed variability well, especially across cohort-size groups.*
 
 ```{r ppc-m2-cohort-calibration, results='asis'}
 fp <- file.path(FIGURES_DIR, "ppc_m2_cohort_calibration.png")
@@ -1289,7 +1289,7 @@ if (file.exists(fp)) {
 }
 ```
 
-*Figure: M2 cohort-stratified calibration. The beta-binomial model improves calibration relative to M1 but still does not capture all structure in the data.*
+*Figure: M2 cohort calibration by cohort size. The beta-binomial model allows extra variability, so the points move closer to the diagonal line compared with M1. This shows improved calibration, especially because M2 is less rigid than the simple binomial model. However, several points still deviate from the line, meaning that overdispersion alone does not fully explain the observed country-year differences.*
 
 ```{r ppc-m3-cohort-calibration, results='asis'}
 fig_path <- file.path(FIGURES_DIR, "ppc_m3_cohort_calibration.png")
@@ -1298,7 +1298,7 @@ if (file.exists(fig_path)) {
 }
 ```
 
-*Figure: M3 calibration by cohort size. The hierarchical beta-binomial model provides the best cohort-level calibration among the three models, although some residual miscalibration remains.*
+*Figure: M3 cohort calibration by cohort size. The hierarchical beta-binomial model gives the closest agreement between observed and predicted success rates, with many points lying near the diagonal line. This indicates that adding country random effects improves calibration for both large and small cohorts. Some dispersion remains, especially among smaller cohorts, but M3 provides the best cohort-level calibration among the three models.*
 
 ### M3 Posterior Predictive Density Overlay
 
@@ -1311,7 +1311,7 @@ if (file.exists(fig_path)) {
 }
 ```
 
-*Figure: M3 posterior predictive density overlay. The dark line is the observed distribution. Light lines are simulated datasets from the posterior.*
+*Figure: M3 posterior predictive density overlay. The dark red curve shows the observed distribution of treatment success rates, while the light blue curves show 100 datasets simulated from the M3 posterior predictive distribution. The model reproduces the main high-success peak reasonably well, but the simulated curves are slightly more spread out than the observed curve. This supports M3 as a good overall fit, while still showing some remaining mismatch in the lower-success part of the distribution.*
 
 ### PPC Visual: Variance Recovery Across Models
 
@@ -1320,7 +1320,7 @@ fig_path <- file.path(FIGURES_DIR, "ppc_model_comparison_variance.png")
 if (file.exists(fig_path)) knitr::include_graphics(fig_path)
 ```
 
-*Figure: Variance recovery across models. The vertical line marks the observed variance. M1's predictive distribution is far too narrow. M2 and M3 are much closer to the observed value, with M3 slightly better.*
+*Figure: Variance recovery across models. The red vertical line shows the observed variance of treatment success rates, and each colored density shows the variance generated by posterior predictive simulations from one model. M1 is far to the left, meaning it strongly underestimates the observed variability. M2 and M3 are much closer to the observed variance, with M3 closest overall, although the observed variance is still near the upper edge of the M3 predictive distribution.*
 
 ---
 
@@ -1363,7 +1363,7 @@ fig_path <- file.path(FIGURES_DIR, "country_re_caterpillar_plot.png")
 if (file.exists(fig_path)) knitr::include_graphics(fig_path)
 ```
 
-*Figure: Country random effect caterpillar plot. Each horizontal line is a country's 95% credible interval. Countries above zero (right of center) have persistently higher success than expected. Countries below zero have persistently lower success. This is descriptive benchmarking, not a causal ranking.*
+*Figure: Country random effects from the M3 hierarchical model. Each point is the posterior mean country effect, and each horizontal line is its 95% credible interval on the logit scale. Countries to the right of zero have higher treatment success than expected after adjusting for region and predictors, while countries to the left of zero have lower success than expected. This plot shows persistent country-level differences, but it should be read as descriptive benchmarking, not as a causal ranking.*
 
 ### Highest and Lowest Country Effects
 
@@ -1452,7 +1452,7 @@ Extensions could include region-varying overdispersion, temporal random effects,
 
 # Conclusion
 
-**The hierarchical beta-binomial model (M3) is preferred** for modeling country-year TB treatment success. It captures both overdispersion ($\phi = 42.9$) and persistent country heterogeneity ($\sigma_u = 0.72$), with the lowest DIC (24,940) and best posterior predictive performance.
+**The hierarchical beta-binomial model (M3) is preferred among the three fitted models** for modeling country-year TB treatment success. It captures both overdispersion ($\phi = 42.9$) and persistent country heterogeneity ($\sigma_u = 0.72$), with the lowest DIC (24,940) and the best posterior predictive performance among the three models.
 
 The evidence is decisive: M1 (binomial) severely underestimates variability (DIC = 2.6 million), and M2 (beta-binomial) improves fit but still lacks country structure (DIC = 27,160). M3's additional complexity is justified by substantially better fit.
 
