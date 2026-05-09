@@ -6,7 +6,7 @@ date: "2026-05-03"
 output:
   html_document:
     toc: true
-    toc_depth: 1
+    toc_depth: 3
     toc_float:
       collapsed: true
       smooth_scroll: true
@@ -219,23 +219,37 @@ pre code {
   padding: 0;
 }
 
+/* Hide subsection lists by default */
 .tocify .tocify-subheader {
   display: none;
 }
 
+/* Level 2 items */
 .tocify .tocify-subheader .tocify-item > a,
 .tocify .tocify-subheader .list-group-item {
   padding-left: 18px;
   font-size: 13px;
 }
 
+/* Level 3 items */
 .tocify .tocify-subheader .tocify-subheader .tocify-item > a,
 .tocify .tocify-subheader .tocify-subheader .list-group-item {
   padding-left: 32px;
+  font-size: 12.5px;
 }
 
-.tocify .toc-expanded > a {
+/* Expanded parent section */
+.tocify .toc-expanded > a,
+.tocify .toc-expanded > .list-group-item {
   font-weight: 700;
+}
+
+/* Active TOC item */
+.tocify .list-group-item.active,
+.tocify .tocify-item > a.tocify-focus,
+.tocify .tocify-item.active > a {
+  background-color: #2563eb;
+  color: white;
 }
 
 @media (max-width: 991px) {
@@ -266,236 +280,144 @@ h1, h2, h3, h4, h5, h6 {
 </style>
 
 <script>
-// Custom scroll handler for accurate sidebar navigation highlighting
-// This replaces the default tocify scrollspy behavior
-(function() {
-  var DEFAULT_ACTIVATION_THRESHOLD = 20; // px from top of viewport
-  
-  function initCustomScrollspy() {
+(function () {
+  function initDynamicToc() {
     if (!window.jQuery) return false;
+
     var $ = window.jQuery;
-    
-    // Get all top-level section headings (h1 elements in the content)
-    var $headings = $('.section.level1 > h1');
-    if (!$headings.length) return false;
-    
-    // Get the TOC container
-    var $toc = $('#TOC, .tocify');
+    var $toc = $("#TOC, .tocify").first();
+
     if (!$toc.length) return false;
-    
-    // Disable default tocify scroll behavior so custom logic is the single source of truth
-    $(window).off('scroll.tocify');
-    
-    // Build a map of section IDs to TOC entries.
-    // Support both anchor-based TOCs and li-only tocify items.
+
+    var $headings = $(".section.level1 > h1, .section.level2 > h2, .section.level3 > h3");
+    if (!$headings.length) return false;
+
     var sectionMap = [];
-    $headings.each(function() {
+
+    $headings.each(function () {
       var $heading = $(this);
-      var $section = $heading.closest('.section.level1');
-      var sectionId = $section.attr('id');
-      if (sectionId) {
-        var headingLabel = ($heading.text() || '').trim();
-        var $tocLink = $toc.find('a[href="#' + sectionId + '"]').first();
-        var $tocItem = $();
+      var $section = $heading.closest(".section");
+      var id = $section.attr("id");
 
-        if ($tocLink.length) {
-          $tocItem = $tocLink.closest('li').first();
-        } else {
-          $tocItem = $toc.find('li.tocify-item').filter(function() {
-            return ($(this).text() || '').trim() === headingLabel;
-          }).first();
-        }
+      if (!id) return;
 
-        if ($tocItem.length) {
-          sectionMap.push({
-            id: sectionId,
-            heading: $heading[0],
-            tocLink: $tocLink,
-            tocItem: $tocItem
-          });
-        }
-      }
+      var $link = $toc.find("a").filter(function () {
+        return $(this).attr("href") === "#" + id;
+      }).first();
+
+      if (!$link.length) return;
+
+      var $item = $link.closest("li").first();
+      if (!$item.length) return;
+
+      sectionMap.push({
+        id: id,
+        heading: $heading,
+        link: $link,
+        item: $item
+      });
     });
-    
+
     if (!sectionMap.length) return false;
-    
-    var currentActiveId = null;
-    var activationThreshold = DEFAULT_ACTIVATION_THRESHOLD;
-    if (window.getComputedStyle && sectionMap[0] && sectionMap[0].heading) {
-      var marginTop = parseFloat(window.getComputedStyle(sectionMap[0].heading).scrollMarginTop || '0');
-      if (!isNaN(marginTop) && marginTop >= 0) {
-        activationThreshold = marginTop;
-      }
+
+    /* Stop default tocify scrollspy so this script controls active state */
+    $(window).off("scroll.tocify");
+
+    function hideAllSubsections() {
+      $toc.find("ul.tocify-subheader")
+        .stop(true, true)
+        .hide();
+
+      $toc.find("li")
+        .removeClass("toc-expanded active");
+
+      $toc.find("a")
+        .removeClass("active tocify-focus");
     }
-    
-    function updateActiveSection() {
+
+    function showActiveBranch($item) {
+      if (!$item || !$item.length) return;
+
+      /* Show parent subsection lists */
+      $item.parents("ul.tocify-subheader").show();
+
+      /* Show direct children of the active item */
+      $item.children("ul.tocify-subheader").show();
+
+      /* Mark all parent branches as expanded */
+      $item.parents("li").addBack().addClass("toc-expanded");
+    }
+
+    function updateToc() {
       var scrollTop = $(window).scrollTop();
-      var viewportTop = scrollTop + activationThreshold;
-      
-      // Find the last section whose heading is at or above the threshold
-      var activeSection = null;
+      var triggerLine = scrollTop + 40;
+
+      var active = sectionMap[0];
+
       for (var i = 0; i < sectionMap.length; i++) {
-        var section = sectionMap[i];
-        var headingTop = $(section.heading).offset().top;
-        
-        if (headingTop <= viewportTop) {
-          activeSection = section;
+        var top = sectionMap[i].heading.offset().top;
+
+        if (top <= triggerLine) {
+          active = sectionMap[i];
         } else {
-          // Once we find a heading below the threshold, stop
           break;
         }
       }
-      
-      // Default to first section if none found (at top of page)
-      if (!activeSection && sectionMap.length > 0) {
-        activeSection = sectionMap[0];
-      }
-      
-      // Update active state if changed
-      if (activeSection && activeSection.id !== currentActiveId) {
-        currentActiveId = activeSection.id;
-        
-        // Remove active class from all TOC items
-        $toc.find('.active, .tocify-focus').removeClass('active tocify-focus');
-        $toc.find('li').removeClass('active');
-        
-        // Add active class to current item
-        activeSection.tocItem.addClass('active');
-        if (activeSection.tocLink && activeSection.tocLink.length) {
-          activeSection.tocLink.addClass('active tocify-focus');
+
+      hideAllSubsections();
+
+      active.item.addClass("active toc-expanded");
+      active.link.addClass("active tocify-focus");
+
+      showActiveBranch(active.item);
+
+      /* Keep active item visible inside sidebar */
+      var tocEl = $toc.get(0);
+      var itemEl = active.item.get(0);
+
+      if (tocEl && itemEl) {
+        var tocTop = $toc.scrollTop();
+        var itemTop = active.item.position().top;
+        var itemBottom = itemTop + active.item.outerHeight();
+        var tocHeight = $toc.height();
+
+        if (itemTop < 0) {
+          $toc.scrollTop(tocTop + itemTop - 20);
+        } else if (itemBottom > tocHeight) {
+          $toc.scrollTop(tocTop + itemBottom - tocHeight + 20);
         }
       }
     }
-    
-    // Throttle scroll events for performance
-    var scrollTimeout;
-    $(window).on('scroll.customScrollspy', function() {
-      if (scrollTimeout) return;
-      scrollTimeout = setTimeout(function() {
-        scrollTimeout = null;
-        updateActiveSection();
-      }, 50);
-    });
-    
-    // Initial update
-    updateActiveSection();
-    
-    return true;
-  }
-  
-  // Wait for DOM and tocify to be ready, then initialize
-  function bootCustomScrollspy(triesLeft) {
-    if (initCustomScrollspy()) return;
-    if (triesLeft <= 0) return;
-    setTimeout(function() {
-      bootCustomScrollspy(triesLeft - 1);
-    }, 300);
-  }
-  
-  document.addEventListener('DOMContentLoaded', function() {
-    // Wait a bit for tocify to initialize first, then override
-    setTimeout(function() {
-      bootCustomScrollspy(20);
-    }, 500);
-  });
-})();
-</script>
 
-<script>
-(function () {
-  function initCollapsibleToc() {
-    if (!window.jQuery) return false;
-    var $ = window.jQuery;
-    var $toc = $("#TOC");
-    if (!$toc.length) return false;
+    var scrollTimer = null;
 
-    var $root = $toc.children("ul");
-    if (!$root.length) return false;
-
-    var $topItems = $root.children("li");
-    if (!$topItems.length) return false;
-
-    $topItems.each(function () {
-      var $item = $(this);
-      var $sub = $item.children("ul.tocify-subheader");
-      if ($sub.length) {
-        $item.addClass("toc-has-children");
-        $sub.hide();
-      }
-    });
-
-    function topItemFor($node) {
-      if (!$node || !$node.length) return $();
-      var $top = $node.closest("li");
-      while ($top.length && !$top.parent().is($root)) {
-        $top = $top.parent().closest("li");
-      }
-      return $top;
-    }
-
-    function expandTop($item, animate) {
-      if (!$item.length) return;
-      var $sub = $item.children("ul.tocify-subheader");
-      if (!$sub.length) return;
-
-      $topItems.not($item)
-        .removeClass("toc-expanded")
-        .children("ul.tocify-subheader")
-        .stop(true, true)
-        .slideUp(120);
-
-      $item.addClass("toc-expanded");
-      if (animate) {
-        $sub.stop(true, true).slideDown(120);
-      } else {
-        $sub.show();
-      }
-    }
-
-    function syncActiveBranch() {
-      var $active = $toc.find("li.active, li.tocify-focus").first();
-      if (!$active.length) return;
-      var $top = topItemFor($active);
-      if (!$top.length) return;
-      expandTop($top, false);
-      $active.parents("ul.tocify-subheader").show();
-    }
-
-    $topItems.children("a")
-      .off("click.tocCollapse")
-      .on("click.tocCollapse", function () {
-        var $item = $(this).parent("li");
-        var $sub = $item.children("ul.tocify-subheader");
-        if (!$sub.length) return;
-
-        if ($item.hasClass("toc-expanded")) {
-          $item.removeClass("toc-expanded");
-          $sub.stop(true, true).slideUp(120);
-        } else {
-          expandTop($item, true);
-        }
-      });
-
-    syncActiveBranch();
     $(window)
-      .off("scroll.tocCollapse hashchange.tocCollapse")
-      .on("scroll.tocCollapse hashchange.tocCollapse", function () {
-        syncActiveBranch();
+      .off("scroll.dynamicToc resize.dynamicToc hashchange.dynamicToc")
+      .on("scroll.dynamicToc resize.dynamicToc hashchange.dynamicToc", function () {
+        if (scrollTimer) return;
+
+        scrollTimer = setTimeout(function () {
+          scrollTimer = null;
+          updateToc();
+        }, 40);
       });
+
+    updateToc();
 
     return true;
   }
 
-  function bootCollapsibleToc(triesLeft) {
-    if (initCollapsibleToc()) return;
+  function bootDynamicToc(triesLeft) {
+    if (initDynamicToc()) return;
     if (triesLeft <= 0) return;
+
     setTimeout(function () {
-      bootCollapsibleToc(triesLeft - 1);
+      bootDynamicToc(triesLeft - 1);
     }, 250);
   }
 
   document.addEventListener("DOMContentLoaded", function () {
-    bootCollapsibleToc(40);
+    bootDynamicToc(40);
   });
 })();
 </script>
