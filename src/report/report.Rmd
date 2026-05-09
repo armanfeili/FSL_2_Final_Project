@@ -1,8 +1,10 @@
 ---
 title: "Bayesian Modeling of Cross-Country Tuberculosis Treatment Success"
 subtitle: "A Fully Bayesian MCMC Analysis of WHO Data, 2012-2023"
-author: "Arman Feili"
-date: "2026-05-03"
+author: |
+  Name & Surname: Arman Feili  
+  Matricola: 2101835  
+  Email: feili.2101835@studenti.uniroma1.it
 output:
   html_document:
     toc: true
