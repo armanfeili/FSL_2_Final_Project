@@ -3150,7 +3150,7 @@ scroll-margin-top: 20px;
 // Custom scroll handler for accurate sidebar navigation highlighting
 // This replaces the default tocify scrollspy behavior
 (function() {
-  var ACTIVATION_THRESHOLD = 120; // px from top of viewport
+  var DEFAULT_ACTIVATION_THRESHOLD = 20; // px from top of viewport
   
   function initCustomScrollspy() {
     if (!window.jQuery) return false;
@@ -3164,28 +3164,35 @@ scroll-margin-top: 20px;
     var $toc = $('#TOC, .tocify');
     if (!$toc.length) return false;
     
-    // Disable default tocify scroll behavior
-    var tocifyInstance = $toc.data('tocify');
-    if (tocifyInstance) {
-      // Override the default scroll handler by unbinding
-      $(window).off('scroll.tocify');
-    }
+    // Disable default tocify scroll behavior so custom logic is the single source of truth
+    $(window).off('scroll.tocify');
     
-    // Build a map of section IDs to their TOC links
+    // Build a map of section IDs to TOC entries.
+    // Support both anchor-based TOCs and li-only tocify items.
     var sectionMap = [];
     $headings.each(function() {
       var $heading = $(this);
       var $section = $heading.closest('.section.level1');
       var sectionId = $section.attr('id');
       if (sectionId) {
-        // Find the corresponding TOC link
-        var $tocLink = $toc.find('a[href="#' + sectionId + '"]');
+        var headingLabel = ($heading.text() || '').trim();
+        var $tocLink = $toc.find('a[href="#' + sectionId + '"]').first();
+        var $tocItem = $();
+
         if ($tocLink.length) {
+          $tocItem = $tocLink.closest('li').first();
+        } else {
+          $tocItem = $toc.find('li.tocify-item').filter(function() {
+            return ($(this).text() || '').trim() === headingLabel;
+          }).first();
+        }
+
+        if ($tocItem.length) {
           sectionMap.push({
             id: sectionId,
             heading: $heading[0],
             tocLink: $tocLink,
-            tocItem: $tocLink.closest('li')
+            tocItem: $tocItem
           });
         }
       }
@@ -3194,10 +3201,17 @@ scroll-margin-top: 20px;
     if (!sectionMap.length) return false;
     
     var currentActiveId = null;
+    var activationThreshold = DEFAULT_ACTIVATION_THRESHOLD;
+    if (window.getComputedStyle && sectionMap[0] && sectionMap[0].heading) {
+      var marginTop = parseFloat(window.getComputedStyle(sectionMap[0].heading).scrollMarginTop || '0');
+      if (!isNaN(marginTop) && marginTop >= 0) {
+        activationThreshold = marginTop;
+      }
+    }
     
     function updateActiveSection() {
       var scrollTop = $(window).scrollTop();
-      var viewportTop = scrollTop + ACTIVATION_THRESHOLD;
+      var viewportTop = scrollTop + activationThreshold;
       
       // Find the last section whose heading is at or above the threshold
       var activeSection = null;
@@ -3228,7 +3242,9 @@ scroll-margin-top: 20px;
         
         // Add active class to current item
         activeSection.tocItem.addClass('active');
-        activeSection.tocLink.addClass('active tocify-focus');
+        if (activeSection.tocLink && activeSection.tocLink.length) {
+          activeSection.tocLink.addClass('active tocify-focus');
+        }
       }
     }
     
