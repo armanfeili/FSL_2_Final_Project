@@ -1,79 +1,85 @@
-# Kaggle public notebook
+# Kaggle public notebook — Bayesian Modeling of WHO TB Treatment Success
 
-This folder holds the public summary code for the Kaggle dataset
-"Processed WHO TB Treatment Success Dataset, 2012-2023". It is **not**
-the full university report — the full report (with all derivations,
-prior choices, sensitivity tables, and posterior plots) lives in the
-original project environment and is too heavy to rerun on Kaggle.
+A public companion to the Kaggle dataset
+[`armanfeili7/processed-who-tb-treatment-success-2012-2023`](https://www.kaggle.com/datasets/armanfeili7/processed-who-tb-treatment-success-2012-2023).
+
+The notebook reproduces, on the Kaggle dataset alone:
+
+- the exploratory data analysis,
+- the Bayesian model-comparison summaries (DIC and posterior predictive checks),
+- the posterior summary for the preferred hierarchical beta-binomial model (M3),
+- the public interpretation layer.
+
+**The full JAGS MCMC fitting was performed in the original project environment.
+This notebook does not refit the models.** It uses the exported compact result
+tables that ship inside the Kaggle dataset
+(`bayesian_result_tables/dic_comparison_table.csv`,
+`bayesian_result_tables/ppc_summary_table.csv`,
+`bayesian_result_tables/posterior_summary_m3.csv`).
 
 ## Files
 
-- `kaggle_analysis_outline.R` — **preferred uploadable Kaggle code file**.
-  Plain R script suitable for Kaggle Code (script kernel) and for the
-  Kaggle CLI (`kaggle kernels push`).
-- `kaggle_analysis_outline.Rmd` — same logic, kept for local /
-  RStudio-style editing. Not the file pushed to Kaggle.
-- `kernel-metadata.json` — Kaggle CLI metadata that points to the `.R`
-  script and to the dataset slug
-  `armanfeili7/processed-who-tb-treatment-success-2012-2023`.
+- `who_tb_bayesian_analysis_kaggle.R` — the uploadable Kaggle Code file (script
+  kernel). Referenced by `kernel-metadata.json`.
+- `who_tb_bayesian_analysis_kaggle.Rmd` — the narrative version, written in
+  report style with interpretation paragraphs after each main plot and table.
+  Intended for local rendering / RStudio editing. Not pushed to Kaggle.
+- `kernel-metadata.json` — Kaggle CLI metadata that points the script kernel at
+  the `.R` file and attaches the dataset slug above.
 - `README.md` — this file.
 
-## Which file should I push to Kaggle?
+Both the `.R` and `.Rmd` consume only files inside the Kaggle dataset (main
+CSV plus the `documentation_tables/` and `bayesian_result_tables/` folders).
+They do not require raw WHO files, `.rds` objects, JAGS posterior draws, or
+any local project artifacts.
 
-Push **`kaggle_analysis_outline.R`**. The `.Rmd` is for editing locally;
-the `.R` script is what Kaggle's script-kernel runner expects, and it is
-what `kernel-metadata.json` already points at via `code_file`.
+## Reproduced content
 
-## What the script does
+- Dataset overview, provenance, attrition pipeline, final-sample snapshot.
+- Variable dictionary and standardization metadata.
+- EDA: success-rate distribution, cohort distribution, region boxplots, yearly
+  trend (median + IQR vs cohort-weighted), region temporal trend, region-year
+  heatmap, top/bottom 15 countries, bivariate predictor panels, year scatter,
+  predictor correlation matrix, missingness summary.
+- Bayesian model ladder narrative (M1 / M2 / M3).
+- DIC table and DIC / ΔDIC bar charts.
+- M3 posterior summary table and credible-interval caterpillar plot.
+- PPC summary table, Bayesian-p plot, and observed-vs-replicated plot.
+- Interpretation, limitations, reuse and citation note, and conclusion.
 
-- Loads `processed_who_tb_treatment_success_country_year_2012_2023.csv` (Kaggle mounted path first,
-  then local fallbacks).
-- Prints sample summary: rows, columns, year range, country count, and
-  number of WHO regions, plus a `summary()` of `success / cohort`.
-- Draws three EDA views:
-  - distribution of `prop_success`,
-  - boxplot of `prop_success` by `g_whoregion`,
-  - median + IQR of `prop_success` per year.
-- Looks for `bayesian_result_tables.zip` next to the main CSV in the
-  Kaggle dataset; if found, automatically unzips it into a temporary
-  directory and prints the published result tables:
-  - `bayesian_result_tables/dic_comparison_table.csv`,
-  - `bayesian_result_tables/ppc_summary_table.csv`,
-  - `bayesian_result_tables/posterior_summary_m3.csv`.
-  If the ZIP is missing, the script prints a clean note and continues
-  with EDA only (it does not fail).
+## Not reproduced (and why)
 
-## What the script does *not* do
+Some figures from the original full report require artifacts that are not
+part of the Kaggle dataset and are summarized through exported tables only:
 
-- It does **not** rerun the full MCMC. The published M1 / M2 / M3 fits
-  use R + JAGS and a multi-thousand-iteration chain with discarded
-  warm-up; reproducing that inside Kaggle is computationally expensive
-  and slow to set up. The bundled result tables are the source of truth for
-  the published numbers.
-- It does **not** reproduce model selection or sensitivity analyses
-  end-to-end. Those are summarized through the bundled tables only.
+- Per-country random-effect caterpillar plots and top / bottom country tables.
+- Posterior predictive density overlays (need the full PPC draws).
+- MCMC diagnostics tables (R-hat, ESS per parameter).
+- Prior predictive simulations and parameter-recovery figures.
+- Robustness / sensitivity tables that were not exported into the Kaggle
+  dataset.
 
-## Dataset layout this notebook assumes
+## Pushing to Kaggle
 
-The attached Kaggle dataset has only one standalone tabular file at the
-root, plus two grouped ZIP archives:
+`kernel-metadata.json` is configured for a private script kernel by default:
 
-- `processed_who_tb_treatment_success_country_year_2012_2023.csv` —
-  main analysis table, kept standalone in the dataset root so Kaggle's
-  Data Explorer focuses on its 17 columns.
-- `documentation_tables.zip` — supporting documentation tables
-  (attrition, provenance, sample snapshot, variable dictionary,
-  standardization metadata).
-- `bayesian_result_tables.zip` — compact Bayesian result tables (DIC
-  comparison, PPC summary, M3 posterior summary). The R script unzips
-  this automatically when it is present.
+```text
+id              armanfeili7/bayesian-modeling-of-who-tb-treatment-success
+code_file       who_tb_bayesian_analysis_kaggle.R
+language        r
+kernel_type     script
+is_private      true
+enable_internet false
+dataset_sources [armanfeili7/processed-who-tb-treatment-success-2012-2023]
+```
 
-## How to run
+When you want to push (privately):
 
-The script expects the dataset to be attached at
-`/kaggle/input/processed-who-tb-treatment-success-2012-2023/` on Kaggle
-(the actual mount path may include a `datasets/<owner>/` segment; the
-script also does a recursive fallback search). Local fallbacks:
-`../dataset/processed_who_tb_treatment_success_country_year_2012_2023.csv`
-and `processed_who_tb_treatment_success_country_year_2012_2023.csv` in
-the working directory.
+```bash
+cd Kaggle/notebook
+kaggle kernels push -p .
+kaggle kernels status armanfeili7/bayesian-modeling-of-who-tb-treatment-success
+```
+
+To make it public later, flip the visibility from the Kaggle UI, or change
+`"is_private": false` and push another version.

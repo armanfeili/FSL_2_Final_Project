@@ -1,10 +1,10 @@
 {
   "id": "armanfeili7/bayesian-modeling-of-who-tb-treatment-success",
   "title": "Bayesian Modeling of WHO TB Treatment Success",
-  "code_file": "kaggle_analysis_outline.R",
+  "code_file": "who_tb_bayesian_analysis_kaggle.R",
   "language": "r",
   "kernel_type": "script",
-  "is_private": true,
+  "is_private": false,
   "enable_gpu": false,
   "enable_internet": false,
   "dataset_sources": [
