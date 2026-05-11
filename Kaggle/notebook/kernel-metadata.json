@@ -1,0 +1,13 @@
+{
+  "id": "armanfeili7/bayesian-modeling-of-who-tb-treatment-success",
+  "title": "Bayesian Modeling of WHO TB Treatment Success",
+  "code_file": "kaggle_analysis_outline.R",
+  "language": "r",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": false,
+  "enable_internet": false,
+  "dataset_sources": [
+    "armanfeili7/processed-who-tb-treatment-success-2012-2023"
+  ]
+}

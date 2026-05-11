@@ -1,0 +1,8 @@
+"step","filter","rows","countries","years"
+0,"Raw merged rows",5130,217,24
+1,"Restrict to years 2012-2023",2580,215,12
+2,"rel_with_new_flg == 1",2138,212,12
+3,"Drop missing identifiers",2138,212,12
+4,"Valid outcomes (cohort>0, 0<=success<=cohort)",2094,207,12
+5,"Drop missing core predictors",2071,206,12
+6,"cohort >= 50",1862,180,12

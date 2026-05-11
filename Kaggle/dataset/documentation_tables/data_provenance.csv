@@ -1,0 +1,6 @@
+"file","source","url","download_date","role","used_in_main"
+"TB_outcomes_2026-04-04.csv","WHO Global TB Programme","https://www.who.int/teams/global-tuberculosis-programme/data","2026-04-04","Primary: Treatment outcomes (response variable)",TRUE
+"TB_burden_countries_2026-04-04.csv","WHO Global TB Programme","https://www.who.int/teams/global-tuberculosis-programme/data","2026-04-04","Primary: Epidemiological burden (predictors)",TRUE
+"TB_data_dictionary_2026-04-04.csv","WHO Global TB Programme","https://www.who.int/teams/global-tuberculosis-programme/data","2026-04-04","Reference: Variable definitions",TRUE
+"TB_notifications_2026-04-04.csv","WHO Global TB Programme","https://www.who.int/teams/global-tuberculosis-programme/data","2026-04-04","Secondary: Notification data (not used in main analysis)",FALSE
+"TB_provisional_notifications_2026-04-04.csv","WHO Global TB Programme","https://www.who.int/teams/global-tuberculosis-programme/data","2026-04-04","Secondary: Provisional data (not used in main analysis)",FALSE

@@ -1,0 +1,196 @@
+{
+  "title": "Processed WHO TB Treatment Success 2012-2023",
+  "id": "armanfeili7/processed-who-tb-treatment-success-2012-2023",
+  "subtitle": "Country-year WHO TB treatment outcome table for Bayesian model comparison",
+  "description": "## Overview\n\nThis dataset is a processed country-year analysis table derived from public WHO Global Tuberculosis Programme files. The locked sample contains 1,862 country-year observations from 180 countries over 12 calendar years, from 2012 to 2023. Each row represents one country-year and combines TB treatment outcome counts, cohort sizes, WHO region, TB burden indicators, standardized predictors, and sensitivity-analysis variables.\n\n## Main response\n\nThe main response is represented as `success` out of `cohort`. The column `prop_success` is included for descriptive summaries, visualizations, and posterior predictive checks. However, the primary statistical models use the count outcome directly, rather than modeling the proportion alone.\n\n## Field descriptions\n\n- `iso3`: Three-letter ISO country code used to identify each country, such as AFG or ITA.\n- `year`: Calendar year of the observation.\n- `country_id`: Numeric ID used internally by JAGS to assign one country random effect to each country.\n- `region_id`: Numeric ID used internally by JAGS to assign the WHO region effect.\n- `g_whoregion`: WHO region label for the country, used to compare regions relative to the AFR baseline.\n- `success`: Number of patients in the cohort who completed treatment successfully.\n- `cohort`: Total number of patients included in the treatment outcome cohort.\n- `prop_success`: Observed treatment success proportion, calculated as `success / cohort`. Used for summaries and posterior predictive checks, not as the modeled response.\n- `e_inc_100k`: Estimated TB incidence per 100,000 population before standardization.\n- `e_mort_100k`: Estimated TB mortality per 100,000 population before standardization.\n- `c_cdr`: Case detection ratio, measuring the estimated share of TB cases detected by the health system.\n- `year_z`: Standardized version of `year`, used so the year effect is on a comparable scale with other predictors.\n- `e_inc_100k_z`: Standardized TB incidence predictor used in the Bayesian models.\n- `e_mort_100k_z`: Standardized TB mortality predictor used in the Bayesian models.\n- `c_cdr_z`: Standardized case detection predictor used in the Bayesian models.\n- `e_tbhiv_prct`: TB-HIV percentage, kept for sensitivity analysis but not included in the primary M1, M2, and M3 models.\n- `used_2021_defs_flg`: Indicator for observations using the post-2021 WHO treatment outcome definitions, used only in sensitivity checks.\n\n## Modeling note\n\nThe processed table was created for a Bayesian model-comparison study using three models: a binomial logistic model, a beta-binomial model with overdispersion, and a hierarchical beta-binomial model with country-level random effects. In the original analysis, the hierarchical beta-binomial model was the preferred model.\n\n## Source and attribution\n\nOriginal data source: World Health Organization Global Tuberculosis Programme public TB data.\n\n## Raw WHO files note\n\nThe raw WHO files are not redistributed in this Kaggle package. They are documented in `docs/RAW_SOURCE_FILES.md`. Users who need the original raw files should download them directly from WHO.\n\n## Disclaimer\n\nThis is a processed derivative dataset created for academic and statistical learning purposes. It is not an official WHO dataset and is not endorsed by WHO. Any reuse should acknowledge WHO and the contributing national TB programmes as the original data source.",
+  "isPrivate": true,
+  "licenses": [
+    {
+      "name": "other"
+    }
+  ],
+  "keywords": [
+    "tuberculosis",
+    "who",
+    "public-health",
+    "bayesian-statistics",
+    "epidemiology",
+    "country-year"
+  ],
+  "resources": [
+    {
+      "path": "processed_who_tb_treatment_success_country_year_2012_2023.csv",
+      "description": "Main processed WHO TB treatment success country-year analysis table. Each row is one country-year observation from 2012-2023. The response is represented as treatment successes out of the treatment cohort, with WHO region, TB burden indicators, standardized predictors, and sensitivity-analysis variables.",
+      "schema": {
+        "fields": [
+          {
+            "name": "iso3",
+            "type": "string",
+            "title": "ISO3 country code",
+            "description": "Three-letter ISO country code used to identify each country, such as AFG or ITA."
+          },
+          {
+            "name": "year",
+            "type": "integer",
+            "title": "Calendar year",
+            "description": "Calendar year of the observation."
+          },
+          {
+            "name": "country_id",
+            "type": "integer",
+            "title": "Internal country index",
+            "description": "Numeric ID used internally by JAGS to assign one country random effect to each country."
+          },
+          {
+            "name": "region_id",
+            "type": "integer",
+            "title": "Internal WHO region index",
+            "description": "Numeric ID used internally by JAGS to assign the WHO region effect."
+          },
+          {
+            "name": "g_whoregion",
+            "type": "string",
+            "title": "WHO region",
+            "description": "WHO region label for the country, used to compare regions relative to the AFR baseline."
+          },
+          {
+            "name": "success",
+            "type": "integer",
+            "title": "Number of successful treatment outcomes",
+            "description": "Number of patients in the cohort who completed treatment successfully."
+          },
+          {
+            "name": "cohort",
+            "type": "integer",
+            "title": "Treatment outcome cohort size",
+            "description": "Total number of patients included in the treatment outcome cohort."
+          },
+          {
+            "name": "prop_success",
+            "type": "number",
+            "title": "Observed treatment success proportion",
+            "description": "Observed success proportion, calculated as success divided by cohort. Used for summaries and posterior predictive checks, not as the modeled response."
+          },
+          {
+            "name": "e_inc_100k",
+            "type": "number",
+            "title": "Estimated TB incidence per 100,000",
+            "description": "Estimated TB incidence per 100,000 population before standardization."
+          },
+          {
+            "name": "e_mort_100k",
+            "type": "number",
+            "title": "Estimated TB mortality per 100,000",
+            "description": "Estimated TB mortality per 100,000 population before standardization."
+          },
+          {
+            "name": "c_cdr",
+            "type": "number",
+            "title": "Case detection ratio",
+            "description": "Case detection ratio, measuring the estimated share of TB cases detected by the health system."
+          },
+          {
+            "name": "year_z",
+            "type": "number",
+            "title": "Standardized year",
+            "description": "Standardized version of year, used so the year effect is on a comparable scale with other predictors."
+          },
+          {
+            "name": "e_inc_100k_z",
+            "type": "number",
+            "title": "Standardized TB incidence",
+            "description": "Standardized TB incidence predictor used in the Bayesian models."
+          },
+          {
+            "name": "e_mort_100k_z",
+            "type": "number",
+            "title": "Standardized TB mortality",
+            "description": "Standardized TB mortality predictor used in the Bayesian models."
+          },
+          {
+            "name": "c_cdr_z",
+            "type": "number",
+            "title": "Standardized case detection ratio",
+            "description": "Standardized case detection predictor used in the Bayesian models."
+          },
+          {
+            "name": "e_tbhiv_prct",
+            "type": "number",
+            "title": "Estimated TB-HIV co-infection percentage",
+            "description": "TB-HIV percentage, kept for sensitivity analysis but not included in the primary M1/M2/M3 models."
+          },
+          {
+            "name": "used_2021_defs_flg",
+            "type": "number",
+            "title": "Post-2021 WHO definition flag",
+            "description": "Indicator for observations using the post-2021 WHO treatment outcome definitions, used only in sensitivity checks."
+          }
+        ]
+      }
+    },
+    {
+      "path": "documentation_tables/attrition_table.csv",
+      "description": "Step-by-step attrition counts from raw merged WHO rows to the locked analysis sample."
+    },
+    {
+      "path": "documentation_tables/data_provenance.csv",
+      "description": "Which raw WHO files were used as inputs and their roles in the main analysis."
+    },
+    {
+      "path": "documentation_tables/final_sample_snapshot.csv",
+      "description": "Quick numeric summary of the locked sample (countries, years, region most affected by the cohort filter)."
+    },
+    {
+      "path": "documentation_tables/project_variable_dictionary.csv",
+      "description": "Original project-level variable dictionary describing each source variable, its role, and missingness."
+    },
+    {
+      "path": "documentation_tables/standardization_metadata.csv",
+      "description": "Means and standard deviations used to build the standardized (_z) predictors."
+    },
+    {
+      "path": "bayesian_result_tables/dic_comparison_table.csv",
+      "description": "DIC model-comparison table for the three Bayesian models."
+    },
+    {
+      "path": "bayesian_result_tables/posterior_summary_m3.csv",
+      "description": "Posterior summary table for the preferred hierarchical beta-binomial model."
+    },
+    {
+      "path": "bayesian_result_tables/ppc_summary_table.csv",
+      "description": "Posterior predictive check summary table."
+    },
+    {
+      "path": "docs/README.md",
+      "description": "High-level overview of the dataset: scope, response, predictors, attribution, and license note."
+    },
+    {
+      "path": "docs/DATA_CARD.md",
+      "description": "Kaggle-style data card: motivation, source data, processing pipeline, intended use, limitations, and ethical interpretation warnings."
+    },
+    {
+      "path": "docs/DATA_DICTIONARY.md",
+      "description": "Per-column documentation of the main CSV: type, meaning, role in the project, and primary vs sensitivity usage."
+    },
+    {
+      "path": "docs/PROVENANCE_AND_FILTERING.md",
+      "description": "Detailed provenance and the exact attrition pipeline; explains why the locked sample is used for all three Bayesian models."
+    },
+    {
+      "path": "docs/LICENSE_AND_ATTRIBUTION.md",
+      "description": "Attribution and license posture: WHO source acknowledgment, no CC0, recommended Kaggle license."
+    },
+    {
+      "path": "docs/RAW_SOURCE_FILES.md",
+      "description": "Exact raw WHO filenames used or downloaded; raw files are not redistributed in this Kaggle package."
+    },
+    {
+      "path": "docs/CITATION.cff",
+      "description": "Machine-readable citation entry (CFF) for this processed derivative dataset."
+    },
+    {
+      "path": "docs/checksums.txt",
+      "description": "SHA256 checksums for the main CSV, helper / result CSVs, and documentation files."
+    }
+  ]
+}

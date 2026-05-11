@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+title: "Processed WHO TB Treatment Success Dataset, 2012-2023"
+message: >-
+  If you use this dataset, please cite both this processed derivative and
+  the original source: World Health Organization (WHO) Global
+  Tuberculosis Programme public TB data
+  (https://www.who.int/teams/global-tuberculosis-programme/data).
+type: dataset
+authors:
+  - family-names: Feili
+    given-names: Arman
+date-released: "2026-05-10"
+abstract: >-
+  A cleaned, joined, and filtered country-year analysis table derived from
+  public WHO Global Tuberculosis Programme data. The locked sample covers
+  1,862 country-years across 180 countries and 12 years (2012-2023) and
+  includes treatment success counts, cohort sizes, WHO region, TB burden
+  predictors, and standardized versions of the continuous predictors used
+  in a Bayesian beta-binomial study of treatment success.
+keywords:
+  - tuberculosis
+  - WHO
+  - Bayesian inference
+  - beta-binomial
+  - treatment success
+  - country-year panel
